@@ -1,0 +1,17 @@
+<?php
+/**
+ * SphinxIndex Configuration
+ *
+ * If you have a ./config/autoload/ directory set up for your project, you can
+ * drop this config file in it and change the values as you wish.
+ */
+$config = array(
+    /**
+     * Directory where scheme of sphinx index is stored
+     */
+    'scheme_storage' => './config/sphinx-config/index/scheme',
+);
+
+return array(
+    'sphinx_index' => $config,
+);

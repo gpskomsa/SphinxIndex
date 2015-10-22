@@ -1,0 +1,23 @@
+{
+    "name": "gpskomsa/sphinx-index",
+    "description": "A zf2 module as a tool to build source data for Sphinx index",
+    "type": "library",
+    "keywords": [
+        "zf2",
+        "sphinx"
+    ],
+    "require": {
+        "php": ">=5.3.3",
+        "zendframework/zendframework": "~2.1",
+        "symfony/yaml": "2.*",
+        "gpskomsa/sphinx-config": "0.*"
+    },
+    "autoload": {
+        "psr-0": {
+            "SphinxIndex": "src/"
+        },
+        "classmap": [
+            "./Module.php"
+        ]
+    }
+}

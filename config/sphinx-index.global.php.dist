@@ -9,7 +9,24 @@ $config = array(
     /**
      * Directory where scheme of sphinx index is stored
      */
-    'scheme_storage' => './config/sphinx-config/index/scheme',
+    //'scheme_storage' => './config/sphinx-config/index/scheme',
+
+    /**
+     * Redis adapter's configuration
+     */
+    'redis_adapter' => array(
+    ),
+
+    /**
+     * Configure options for Index factory.
+     */
+    'indexFactory' => array(
+        /**
+         * Array of index configurations. Each configuration is DI container's
+         * configuration
+         */
+        'indexes' => array(),
+    ),
 );
 
 return array(

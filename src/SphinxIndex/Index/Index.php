@@ -44,11 +44,13 @@ class Index
     /**
      * @param string $indexName
      * @param Config $indexerConfig
-     * @param integer $type
+     * @param DataProviderInterface $dataProvider
+     * @param integer $indexType
      */
     public function __construct(
         $indexName,
         Config $indexerConfig,
+        DataProviderInterface $dataProvider,
         $indexType = self::INDEX_TYPE_MAIN
     )
     {
@@ -59,16 +61,8 @@ class Index
         }
 
         $this->indexerConfig = $indexerConfig;
-        $this->type = (integer) $indexType;
-    }
-
-    /**
-     *
-     * @param DataProviderInterface $provider
-     */
-    public function setDataProvider(DataProviderInterface $dataProvider)
-    {
         $this->dataProvider = $dataProvider;
+        $this->type = (integer) $indexType;
     }
 
     /**

@@ -22,6 +22,7 @@ interface DataProviderInterface
 
     /**
      * Returns object of StorageInterface
+     * @return StorageInterface
      */
     public function getStorage();
 

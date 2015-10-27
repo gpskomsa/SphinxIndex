@@ -4,24 +4,22 @@ return array(
     'console' => array(
         'router' => array(
             'routes' => array(
-                'index_set' => array(
+                'sphinxindex_set' => array(
                     'type' => 'simple',
                     'options' => array(
                         'route'    => 'index (build|update):command <index>',
                         'defaults' => array(
-                            '__NAMESPACE__' => 'Index\Controller',
-                            'controller'    => 'Index\Index',
+                            'controller'    => 'SphinxIndex\Index\Index',
                             'action'        => 'index',
                         ),
                     ),
                 ),
-                'index_split' => array(
+                'sphinxindex_split' => array(
                     'type' => 'simple',
                     'options' => array(
                         'route'    => 'index split <index> [<target>]',
                         'defaults' => array(
-                            '__NAMESPACE__' => 'Index\Controller',
-                            'controller'    => 'Index\Split',
+                            'controller'    => 'SphinxIndex\Index\Split',
                             'action'        => 'split',
                         ),
                     ),

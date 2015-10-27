@@ -6,6 +6,11 @@ use Zend\ServiceManager\ServiceManagerAwareInterface;
 use Zend\ServiceManager\ServiceManager;
 use Zend\Di\Di;
 
+use SphinxIndex\Options\ModuleOptions;
+
+/**
+ * @todo rework it to abstract factory
+ */
 class IndexFactory implements IndexFactoryInterface, ServiceManagerAwareInterface
 {
     /**
@@ -13,6 +18,21 @@ class IndexFactory implements IndexFactoryInterface, ServiceManagerAwareInterfac
      * @var ServiceManager
      */
     protected $serviceManager = null;
+
+    /**
+     *
+     * @var ModuleOptions
+     */
+    protected $moduleOptions = null;
+
+    /**
+     *
+     * @param ModuleOptions $moduleOptions
+     */
+    public function __construct(ModuleOptions $moduleOptions)
+    {
+        $this->moduleOptions = $moduleOptions;
+    }
 
     /**
      *
@@ -35,12 +55,14 @@ class IndexFactory implements IndexFactoryInterface, ServiceManagerAwareInterfac
     public function getIndex($indexName)
     {
         $dic = $this->getInitializedDic($indexName);
-        $index = $dic->get('Index\Index\Index', array(
+        $index = $dic->get('SphinxIndex\Index\Index', array(
             'indexName' => $indexName,
             'searchdConfig' => $this->serviceManager->get('SearchdConfig'),
             'indexerConfig' => $this->serviceManager->get('IndexerConfig'),
             'mainIndex' => $this->getMainIndex($indexName),
-            'serverId' => SERVER_ID,
+            'serverId' => $this->serviceManager
+                ->get('SphinxConfigModuleOptions')
+                ->getConfigId(),
             'serviceManager' => $this->serviceManager,
         ));
 
@@ -56,7 +78,6 @@ class IndexFactory implements IndexFactoryInterface, ServiceManagerAwareInterfac
     public function getInitializedDic($indexName)
     {
         $params = $this->getConfigOptionsFor($indexName);
-
         $dic = new Di();
         if (isset($params['instance'])) {
             $this->prepareInstanceConfig($params['instance']);
@@ -78,7 +99,7 @@ class IndexFactory implements IndexFactoryInterface, ServiceManagerAwareInterfac
         }
 
         $dic->instanceManager()->setParameters(
-            'Index\Index\Index',
+            'SphinxIndex\Index\Index',
             array(
                 'indexType' => $indexType
             )
@@ -94,35 +115,12 @@ class IndexFactory implements IndexFactoryInterface, ServiceManagerAwareInterfac
     protected function prepareInstanceConfig(array &$config)
     {
         foreach ($config as &$value) {
-            if (is_array($value) && count($value) == 1 && isset($value['valueFromService'])) {
-                $value = $this->getValueFromService($value['valueFromService']);
+            if (is_array($value) && count($value) == 1 && isset($value['valueAsService'])) {
+                $value = $this->serviceManager->get($value['valueAsService']);
             } else if (is_array($value)) {
                 $this->prepareInstanceConfig($value);
             }
         }
-    }
-
-    /**
-     * Returns value from specified service
-     * Service is an alias from ServiceManager
-     *
-     * @param array $options
-     * @return mixed
-     * @throws \Exception
-     */
-    protected function getValueFromService(array $options)
-    {
-        if (!isset($options['serviceName'])) {
-            throw new \Exception('serviceName option must be defined');
-        }
-
-        $service = $this->serviceManager->get($options['serviceName']);
-
-        $method = isset($options['serviceMethod']) ? $options['serviceMethod'] : 'get';
-        $params = isset($options['parameters']) ? $options['parameters'] : array();
-        $value = call_user_func_array(array($service, $method), $params);
-
-        return $value;
     }
 
     /**
@@ -134,8 +132,8 @@ class IndexFactory implements IndexFactoryInterface, ServiceManagerAwareInterfac
     public function canCreate($indexName)
     {
         $configName = $this->getConfigName($indexName);
-        $config = $this->serviceManager->get('config');
-        if (!isset($config['indexFactory']['indexes'][$configName])) {
+        $config = $this->moduleOptions->getIndexFactory();
+        if (!isset($config['indexes'][$configName])) {
             return false;
         }
 
@@ -152,14 +150,14 @@ class IndexFactory implements IndexFactoryInterface, ServiceManagerAwareInterfac
     protected function getConfigName($indexName)
     {
         $indexerConfig = $this->serviceManager->get('IndexerConfig');
-        $config = $this->serviceManager->get('config');
+        $config = $this->moduleOptions->getIndexFactory();
 
         $section = $indexerConfig->getSection('index', $indexName);
-        if (!$section || !isset($config['indexFactory']['indexes'][$section->getName()])) {
+        if (!$section || !isset($config['indexes'][$section->getName()])) {
             $section = $indexerConfig->getDistributedFor($indexName);
         }
 
-        if (!$section || !isset($config['indexFactory']['indexes'][$section->getName()])) {
+        if (!$section || !isset($config['indexes'][$section->getName()])) {
             return $indexName;
         }
 
@@ -204,19 +202,19 @@ class IndexFactory implements IndexFactoryInterface, ServiceManagerAwareInterfac
 
         $configName = $this->getConfigName($indexName);
 
-        $config = $this->serviceManager->get('config');
-        $params = $config['indexFactory']['indexes'][$configName];
+        $config = $this->moduleOptions->getIndexFactory();
+        $params = $config['indexes'][$configName];
         if (isset($params['instanceExtends'])) {
             $params['instance'] = isset($params['instance']) ? $params['instance'] : array();
             $params['instance'] = $this->arrayMergeRecursive(
                 $params['instance'],
-                $config['indexFactory']['indexes'][$params['instanceExtends']]['instance']
+                $config['indexes'][$params['instanceExtends']]['instance']
             );
         }
 
-        if (isset($config['indexFactory']['global'])) {
+        if (isset($config['global'])) {
             $params = $this->arrayMergeRecursive(
-                $config['indexFactory']['global'],
+                $config['global'],
                 $params
             );
         }

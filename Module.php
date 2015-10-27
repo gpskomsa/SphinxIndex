@@ -1,15 +1,14 @@
 <?php
-namespace Index;
+namespace SphinxIndex;
 
-use Zend\ModuleManager\ModuleManager;
 use Zend\ModuleManager\Feature\ConsoleUsageProviderInterface;
 use Zend\Console\Adapter\AdapterInterface as Console;
+use Zend\Mvc\MvcEvent;
 
 class Module implements ConsoleUsageProviderInterface
 {
-    public function init(ModuleManager $manager)
-    {
-    }
+    public function onBootstrap(MvcEvent $e)
+    {}
 
     public function getConfig()
     {
@@ -24,6 +23,13 @@ class Module implements ConsoleUsageProviderInterface
                     __NAMESPACE__ => __DIR__ . '/src/' . __NAMESPACE__,
                 ),
             ),
+        );
+    }
+
+    public function getModuleDependencies()
+    {
+        return array(
+            'SphinxConfig',
         );
     }
 
@@ -59,11 +65,20 @@ class Module implements ConsoleUsageProviderInterface
                 'SphinxIndex\Service\SphinxAdapter' => function($sm) {
                     return new Service\SphinxAdapter();
                 },
-                'SphinxIndex\DataProviderPluginManager' => 'Index\DataProvider\Service\PluginManagerFactory',
+                'SphinxIndexModuleOptions' => function($sm) {
+                    $config = $sm->get('Config');
+                    return new Options\ModuleOptions(isset($config['sphinx_index']) ? $config['sphinx_index'] : array());
+                },
+                'SphinxIndex\IndexFactory' => function($sm) {
+                    return new Index\IndexFactory($sm->get('SphinxIndexModuleOptions'));
+                },
+                'SphinxIndex\DataProviderPluginManager' => 'SphinxIndex\DataProvider\Service\PluginManagerFactory',
+            ),
+            'abstract_factories' => array(
+                'SphinxIndex\Redis\Adapter\AbstractFactory',
             ),
             'invokables' => array(
                 'SphinxIndex\Redis' => '\Redis',
-                'SphinxIndex\IndexFactory' => 'Index\Index\IndexFactory',
             ),
             'shared' => array(
                 'SphinxIndex\Redis' => false,

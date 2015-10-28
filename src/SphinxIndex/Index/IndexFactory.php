@@ -55,15 +55,9 @@ class IndexFactory implements AbstractFactoryInterface
         $dic = new Di();
         if (isset($params['instance'])) {
             $this->prepareInstanceConfig($params['instance'], $serviceLocator);
-
-            $dic->configure(
-                new \Zend\Di\Config(
-                    array(
-                        'instance' => $params['instance']
-                    )
-                )
-            );
         }
+
+        $dic->configure(new \Zend\Di\Config($params));
 
         if (!isset($params['delta']) || !$params['delta']) {
             $indexType = Index::INDEX_TYPE_MAIN;

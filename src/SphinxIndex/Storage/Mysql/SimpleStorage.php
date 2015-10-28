@@ -324,12 +324,12 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
 
     /**
      *
-     * @param RangeProviderInterface $ranger
+     * @param RangeProviderInterface $rangeProvider
      * @return AbstractStorage
      */
-    public function setRangeProvider(RangeProviderInterface $ranger)
+    public function setRangeProvider(RangeProviderInterface $rangeProvider)
     {
-        $this->ranger = $ranger;
+        $this->ranger = $rangeProvider;
 
         return $this;
     }

@@ -9,7 +9,7 @@ return array(
                     'options' => array(
                         'route'    => 'index (build|update):command <index>',
                         'defaults' => array(
-                            'controller'    => 'SphinxIndex\Index\Index',
+                            'controller'    => 'SphinxIndex\Index',
                             'action'        => 'index',
                         ),
                     ),
@@ -19,7 +19,7 @@ return array(
                     'options' => array(
                         'route'    => 'index split <index> [<target>]',
                         'defaults' => array(
-                            'controller'    => 'SphinxIndex\Index\Split',
+                            'controller'    => 'SphinxIndex\Split',
                             'action'        => 'split',
                         ),
                     ),

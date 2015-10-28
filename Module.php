@@ -36,17 +36,9 @@ class Module implements ConsoleUsageProviderInterface
     public function getControllerConfig()
     {
         return array(
-            'factories' => array(
-                'SphinxIndex\Index\Index' => function ($sm) {
-                    $if = $sm->getServiceLocator()->get('SphinxIndex\IndexFactory');
-                    $controller = new Controller\IndexController($if);
-                    return $controller;
-                },
-                'SphinxIndex\Index\Split' => function ($sm) {
-                    $if = $sm->getServiceLocator()->get('SphinxIndex\IndexFactory');
-                    $controller = new Controller\SplitController($if);
-                    return $controller;
-                },
+            'invokables' => array(
+                'SphinxIndex\Index' => 'SphinxIndex\Controller\IndexController',
+                'SphinxIndex\Split' => 'SphinxIndex\Controller\SplitController',
             ),
         );
     }
@@ -58,9 +50,6 @@ class Module implements ConsoleUsageProviderInterface
                 'SphinxIndex\Service\RedisAdapter' => function($sm) {
                     $instance = new Service\RedisAdapter();
                     return $instance;
-                },
-                'SphinxIndex\Service\DbAdapter' => function($sm) {
-                    return new Service\DbAdapter();
                 },
                 'SphinxIndex\Service\SphinxAdapter' => function($sm) {
                     return new Service\SphinxAdapter();
@@ -76,6 +65,7 @@ class Module implements ConsoleUsageProviderInterface
             ),
             'abstract_factories' => array(
                 'SphinxIndex\Redis\Adapter\AbstractFactory',
+                'SphinxIndex\Index\IndexFactory',
             ),
             'invokables' => array(
                 'SphinxIndex\Redis' => '\Redis',

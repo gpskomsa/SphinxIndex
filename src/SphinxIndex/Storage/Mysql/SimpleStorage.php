@@ -288,7 +288,7 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
      */
     protected function applyConditionsForRange(Select $select)
     {
-        $range = $this->ranger ? $this->ranger->getRange() : aray(0, -1);
+        $range = $this->ranger ? $this->ranger->getRange() : array(0, -1);
 
         $custom = new Where();
         $custom->greaterThan('main.' . $this->getProperty('docIdField'), $range[0]);

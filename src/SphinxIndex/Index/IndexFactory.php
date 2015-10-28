@@ -2,69 +2,42 @@
 
 namespace SphinxIndex\Index;
 
-use Zend\ServiceManager\ServiceManagerAwareInterface;
-use Zend\ServiceManager\ServiceManager;
+use Zend\ServiceManager\ServiceLocatorInterface;
+use Zend\ServiceManager\AbstractFactoryInterface;
 use Zend\Di\Di;
 
-use SphinxIndex\Options\ModuleOptions;
-
-/**
- * @todo rework it to abstract factory
- */
-class IndexFactory implements IndexFactoryInterface, ServiceManagerAwareInterface
+class IndexFactory implements AbstractFactoryInterface
 {
     /**
      *
-     * @var ServiceManager
+     * @var string
      */
-    protected $serviceManager = null;
-
-    /**
-     *
-     * @var ModuleOptions
-     */
-    protected $moduleOptions = null;
-
-    /**
-     *
-     * @param ModuleOptions $moduleOptions
-     */
-    public function __construct(ModuleOptions $moduleOptions)
-    {
-        $this->moduleOptions = $moduleOptions;
-    }
-
-    /**
-     *
-     * @param ServiceManager $serviceManager
-     * @return IndexFactory
-     */
-    public function setServiceManager(ServiceManager $serviceManager)
-    {
-        $this->serviceManager = $serviceManager;
-
-        return $this;
-    }
-
+    protected $match = '/^SphinxIndex\\\\Index\\\\Index\\\\([\w]+)$/i';
+    
     /**
      * Main method, returns object of Index
      *
-     * @param string $indexName
+     * @param ServiceLocatorInterface $serviceLocator
+     * @param string $name
+     * @param string $requestedName
      * @return Index
      */
-    public function getIndex($indexName)
+    public function createServiceWithName(ServiceLocatorInterface $serviceLocator, $name, $requestedName)
     {
-        $dic = $this->getInitializedDic($indexName);
-        $index = $dic->get('SphinxIndex\Index\Index', array(
+        $indexName = strtolower(preg_replace($this->match, '\1', $requestedName));
+        $dic = $this->getInitializedDic($indexName, $serviceLocator);
+        $index = $dic->get(
+            'SphinxIndex\Index\Index', array(
             'indexName' => $indexName,
-            'searchdConfig' => $this->serviceManager->get('SearchdConfig'),
-            'indexerConfig' => $this->serviceManager->get('IndexerConfig'),
-            'mainIndex' => $this->getMainIndex($indexName),
-            'serverId' => $this->serviceManager
+            'searchdConfig' => $serviceLocator->get('SearchdConfig'),
+            'indexerConfig' => $serviceLocator->get('IndexerConfig'),
+            'mainIndex' => $this->getMainIndex($indexName, $serviceLocator),
+            'serverId' => $serviceLocator
                 ->get('SphinxConfigModuleOptions')
                 ->getConfigId(),
-            'serviceManager' => $this->serviceManager,
-        ));
+            'serviceManager' => $serviceLocator,
+            )
+        );
 
         return $index;
     }
@@ -73,19 +46,19 @@ class IndexFactory implements IndexFactoryInterface, ServiceManagerAwareInterfac
      * Makes Di instance for index $indexName
      *
      * @param string $indexName
+     * @param ServiceLocatorInterface $serviceLocator
      * @return Di
      */
-    public function getInitializedDic($indexName)
+    protected function getInitializedDic($indexName, ServiceLocatorInterface $serviceLocator)
     {
-        $params = $this->getConfigOptionsFor($indexName);
+        $params = $this->getConfigOptionsFor($indexName, $serviceLocator);
         $dic = new Di();
         if (isset($params['instance'])) {
-            $this->prepareInstanceConfig($params['instance']);
+            $this->prepareInstanceConfig($params['instance'], $serviceLocator);
 
             $dic->configure(
                 new \Zend\Di\Config(
                     array(
-                        'definition' => array(),
                         'instance' => $params['instance']
                     )
                 )
@@ -111,14 +84,15 @@ class IndexFactory implements IndexFactoryInterface, ServiceManagerAwareInterfac
     /**
      *
      * @param array $config
+     * @param ServiceLocatorInterface $serviceLocator
      */
-    protected function prepareInstanceConfig(array &$config)
+    protected function prepareInstanceConfig(array &$config, ServiceLocatorInterface $serviceLocator)
     {
         foreach ($config as &$value) {
-            if (is_array($value) && count($value) == 1 && isset($value['valueAsService'])) {
-                $value = $this->serviceManager->get($value['valueAsService']);
+            if (is_array($value) && count($value) == 1 && isset($value['serviceManagerServiceName'])) {
+                $value = $serviceLocator->get($value['serviceManagerServiceName']);
             } else if (is_array($value)) {
-                $this->prepareInstanceConfig($value);
+                $this->prepareInstanceConfig($value, $serviceLocator);
             }
         }
     }
@@ -126,13 +100,20 @@ class IndexFactory implements IndexFactoryInterface, ServiceManagerAwareInterfac
     /**
      * Can index be created?
      *
-     * @param string $indexName
+     * @param ServiceLocatorInterface $serviceLocator
+     * @param string $name
+     * @param string $requestedName
      * @return boolean
      */
-    public function canCreate($indexName)
+    public function canCreateServiceWithName(ServiceLocatorInterface $serviceLocator, $name, $requestedName)
     {
-        $configName = $this->getConfigName($indexName);
-        $config = $this->moduleOptions->getIndexFactory();
+        if (!preg_match($this->match, $requestedName)) {
+            return false;
+        }
+
+        $indexName = strtolower(preg_replace($this->match, '\1', $requestedName));
+        $configName = $this->getConfigOptionNameFor($indexName, $serviceLocator);
+        $config = $serviceLocator->get('SphinxIndexModuleOptions')->getIndexFactory();
         if (!isset($config['indexes'][$configName])) {
             return false;
         }
@@ -143,14 +124,14 @@ class IndexFactory implements IndexFactoryInterface, ServiceManagerAwareInterfac
     /**
      * Returns distributed index name if source index name is chunk of someone
      *
-     * @todo rename function to appropriate name
      * @param string $indexName
+     * @param ServiceLocatorInterface $serviceLocator
      * @return string|false
      */
-    protected function getConfigName($indexName)
+    protected function getConfigOptionNameFor($indexName, ServiceLocatorInterface $serviceLocator)
     {
-        $indexerConfig = $this->serviceManager->get('IndexerConfig');
-        $config = $this->moduleOptions->getIndexFactory();
+        $indexerConfig = $serviceLocator->get('IndexerConfig');
+        $config = $serviceLocator->get('SphinxIndexModuleOptions')->getIndexFactory();
 
         $section = $indexerConfig->getSection('index', $indexName);
         if (!$section || !isset($config['indexes'][$section->getName()])) {
@@ -169,11 +150,12 @@ class IndexFactory implements IndexFactoryInterface, ServiceManagerAwareInterfac
      * otherwise returns just source name
      *
      * @param string $indexName
+     * @param ServiceLocatorInterface $serviceLocator
      * @return string
      */
-    public function getMainIndex($indexName)
+    protected function getMainIndex($indexName, ServiceLocatorInterface $serviceLocator)
     {
-        $params = $this->getConfigOptionsFor($indexName);
+        $params = $this->getConfigOptionsFor($indexName, $serviceLocator);
 
         if (!isset($params['delta']) || !$params['delta']) {
             $mainIndex = $indexName;
@@ -192,17 +174,14 @@ class IndexFactory implements IndexFactoryInterface, ServiceManagerAwareInterfac
      * Returns config parameters array for index name
      *
      * @param string $indexName
+     * @param ServiceLocatorInterface $serviceLocator
      * @return array
      */
-    protected function getConfigOptionsFor($indexName)
+    protected function getConfigOptionsFor($indexName, ServiceLocatorInterface $serviceLocator)
     {
-        if (!$this->canCreate($indexName)) {
-            throw new \Exception('options for ' . $indexName . ' not defined in config');
-        }
+        $configName = $this->getConfigOptionNameFor($indexName, $serviceLocator);
 
-        $configName = $this->getConfigName($indexName);
-
-        $config = $this->moduleOptions->getIndexFactory();
+        $config = $serviceLocator->get('SphinxIndexModuleOptions')->getIndexFactory();
         $params = $config['indexes'][$configName];
         if (isset($params['instanceExtends'])) {
             $params['instance'] = isset($params['instance']) ? $params['instance'] : array();

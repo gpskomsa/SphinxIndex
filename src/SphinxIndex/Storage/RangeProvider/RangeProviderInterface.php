@@ -1,6 +1,6 @@
 <?php
 
-namespace SphinxIndex\Service;
+namespace SphinxIndex\Storage\RangeProvider;
 
 use SphinxIndex\Storage\Chunks;
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace SphinxIndex\Service;
+namespace SphinxIndex\Storage\ControlPoint;
 
 interface ControlPointManagerInterface
 {

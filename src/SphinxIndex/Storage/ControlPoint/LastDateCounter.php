@@ -1,6 +1,6 @@
 <?php
 
-namespace SphinxIndex\Service;
+namespace SphinxIndex\Storage\ControlPoint;
 
 use Zend\Db\Sql\Sql;
 use Zend\Db\Sql\Predicate\PredicateSet;
@@ -8,8 +8,6 @@ use Zend\Db\Sql\Where;
 use Zend\Db\Adapter\Adapter;
 use Zend\Db\Sql\Predicate\Expression;
 use Zend\Db\TableGateway\TableGateway;
-
-use SphinxIndex\Service\ControlPointManagerInterface;
 
 class LastDateCounter implements ControlPointManagerInterface
 {

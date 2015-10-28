@@ -14,8 +14,8 @@ use Zend\EventManager\EventManagerInterface;
 use SphinxIndex\Storage\StorageInterface;
 use SphinxIndex\Storage\ControlPointUsingInterface;
 use SphinxIndex\Storage\RangedInterface;
-use SphinxIndex\Service\RangeProviderInterface;
-use SphinxIndex\Service\ControlPointManagerInterface;
+use SphinxIndex\Storage\RangeProvider\RangeProviderInterface;
+use SphinxIndex\Storage\ControlPoint\ControlPointManagerInterface;
 use SphinxIndex\Storage\Mysql\Chunk;
 use SphinxIndex\Storage\Stated;
 

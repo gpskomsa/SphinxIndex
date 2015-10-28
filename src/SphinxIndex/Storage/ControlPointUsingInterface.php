@@ -2,7 +2,7 @@
 
 namespace SphinxIndex\Storage;
 
-use SphinxIndex\Service\ControlPointManagerInterface;
+use SphinxIndex\Storage\ControlPoint\ControlPointManagerInterface;
 
 /**
  * @todo split interface into two separate: Aware and Mark?

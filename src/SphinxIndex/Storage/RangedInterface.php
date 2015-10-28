@@ -2,13 +2,17 @@
 
 namespace SphinxIndex\Storage;
 
-use SphinxIndex\Service\RangeProviderInterface;
+use SphinxIndex\Storage\RangeProvider\RangeProviderInterface;
 
 /**
  * @todo split interface into two separate: Aware and Split?
  */
 interface RangedInterface
 {
+    /**
+     *
+     * @param RangeProviderInterface $ranger
+     */
     public function setRangeProvider(RangeProviderInterface $ranger);
 
     /**

@@ -11,6 +11,7 @@ use SphinxIndex\Storage\Chunks;
 use Zend\EventManager\EventManager;
 use Zend\EventManager\EventManagerInterface;
 use Zend\Filter\FilterInterface;
+use SphinxIndex\Entity\DocumentSet;
 
 class SimpleStorage implements StorageInterface, RangedInterface
 {
@@ -156,16 +157,28 @@ class SimpleStorage implements StorageInterface, RangedInterface
 
     /**
      *
+     * @var DocumentSet
+     */
+    protected $documentSetProto = null;
+
+    /**
+     *
      * @param \Redis $adapter
+     * @param DocumentSet $documentSetProto
      * @param array $options
      */
     public function __construct(
         \Redis $adapter,
+        DocumentSet $documentSetProto = null,
         array $options = array()
     )
     {
         $this->setAdapter($adapter);
         unset($options['adapter']);
+
+        if ($documentSetProto) {
+            $this->documentSetProto = $documentSetProto;
+        }
 
         $this->setOptions($options);
     }
@@ -314,7 +327,7 @@ class SimpleStorage implements StorageInterface, RangedInterface
 
     /**
      *
-     * @param array $map
+     * @param array $value
      * @return SimpleStorage
      */
     public function setValueMap(array $value)
@@ -358,6 +371,19 @@ class SimpleStorage implements StorageInterface, RangedInterface
         $this->keyField = $keyField;
 
         return $this;
+    }
+
+    /**
+     *
+     * @return DocumentSet
+     */
+    public function getDocumentSetProto()
+    {
+        if (null === $this->documentSetProto) {
+            $this->documentSetProto = new DocumentSet();
+        }
+
+        return $this->documentSetProto;
     }
 
     /**
@@ -452,7 +478,7 @@ class SimpleStorage implements StorageInterface, RangedInterface
 
     /**
      *
-     * @return Array|false
+     * @return DocumentSet|false
      */
     public function getItems()
     {
@@ -551,7 +577,8 @@ class SimpleStorage implements StorageInterface, RangedInterface
 
         $this->state(__FUNCTION__, $end + 1);
 
-        return $keys;
+        $documents = clone $this->getDocumentSetProto();
+        return $documents->set($keys);
     }
 
     /**

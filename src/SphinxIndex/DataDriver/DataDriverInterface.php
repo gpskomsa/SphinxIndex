@@ -2,17 +2,21 @@
 
 namespace SphinxIndex\DataDriver;
 
+use SphinxIndex\Entity\DocumentSet;
+
 interface DataDriverInterface
 {
     /**
      * Adds documents into index
+     * @param DocumentSet $documents
      */
-    public function addDocuments($data);
+    public function addDocuments(DocumentSet $documents);
 
     /**
      * Deletes documents from index
+     * @param DocumentSet $documents
      */
-    public function removeDocuments($data);
+    public function removeDocuments(DocumentSet $documents);
 
     /**
      * DataDriver work initialization

@@ -4,6 +4,8 @@ namespace SphinxIndex\DataProvider\Plugin;
 
 use Zend\Filter\FilterInterface;
 
+use SphinxIndex\Entity\Document;
+
 class Filters extends AbstractPlugin
 {
     /**
@@ -77,10 +79,10 @@ class Filters extends AbstractPlugin
 
     /**
      *
-     * @param mixed $document
-     * @return \Index\DataProvider\Plugin\Filters
+     * @param Document $document
+     * @return Filters|Document
      */
-    public function __invoke($document = null)
+    public function __invoke(Document $document = null)
     {
         if (null === $document) {
             return $this;
@@ -92,10 +94,10 @@ class Filters extends AbstractPlugin
     /**
      * Filters fields and attributes of document
      *
-     * @param mixed $document
-     * @return mixed
+     * @param Document $document
+     * @return Document
      */
-    public function filter($document)
+    public function filter(Document $document)
     {
         foreach ($this->fieldFilters as $field => $data) {
             if (!isset($document[$data['field']])) {

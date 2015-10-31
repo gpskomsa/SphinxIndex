@@ -11,6 +11,8 @@ use SphinxIndex\Storage\StorageInterface;
 use SphinxIndex\DataDriver\DataDriverInterface;
 use SphinxIndex\Storage\ControlPointUsingInterface;
 
+use SphinxIndex\Entity\DocumentSet;
+
 class SimpleDataProvider implements DataProviderInterface, ServiceManagerAwareInterface
 {
     /**
@@ -26,21 +28,6 @@ class SimpleDataProvider implements DataProviderInterface, ServiceManagerAwareIn
      * @var DataDriverInterface
      */
     protected $dataDriver = null;
-
-    /**
-     * Tranzit buffer for documents
-     *
-     * @var array
-     */
-    protected $pool = array();
-
-    /**
-     * Pool size(count of documents)
-     * 0 - not limited
-     *
-     * @var integer
-     */
-    protected $poolSize = 0;
 
     /**
      *
@@ -96,18 +83,6 @@ class SimpleDataProvider implements DataProviderInterface, ServiceManagerAwareIn
                 call_user_func_array(array($this, $method), array($value));
             }
         }
-
-        return $this;
-    }
-
-    /**
-     *
-     * @param integer $value
-     * @return SimpleDataProvider
-     */
-    public function setPoolSize($value)
-    {
-        $this->poolSize = (integer) $value;
 
         return $this;
     }
@@ -240,31 +215,7 @@ class SimpleDataProvider implements DataProviderInterface, ServiceManagerAwareIn
      */
     public function setDocuments()
     {
-        $this->dataDriver->init();
-
-        while($documents = $this->storage->getItems()) {
-            $this->pool = array();
-            foreach ($documents as $document) {
-                if ($this->poolSize) {
-                    $this->addToPool($document);
-                } else {
-                    $document = $this->prepareDocument($document);
-                    if ($document) {
-                        $this->dataDriver->addDocuments(array($document));
-                    }
-                }
-            }
-        }
-
-        if ($this->poolSize) {
-            $this->sendPool();
-        }
-
-        $this->dataDriver->finish();
-
-        if ($this->storage instanceof ControlPointUsingInterface) {
-            $this->storage->markControlPoint();
-        }
+        $this->processDocuments();
     }
 
     /**
@@ -273,28 +224,26 @@ class SimpleDataProvider implements DataProviderInterface, ServiceManagerAwareIn
      */
     public function updateDocuments()
     {
+        $this->processDocuments(true);
+    }
+
+    /**
+     *
+     * @param boolean $update
+     */
+    protected function processDocuments($update = false)
+    {
         $this->dataDriver->init();
 
-        while ($documents = $this->storage->getItemsToUpdate()) {
-            $this->pool = array();
-            foreach ($documents as $document) {
-                if ($this->poolSize) {
-                    $this->addToPool($document);
-                } else {
-                    $document = $this->prepareDocument($document);
-                    if ($document) {
-                        $this->dataDriver->addDocuments(array($document));
-                    }
-                }
+        while($documents = $this->storage->getItems()) {
+            $this->prepareDocuments($documents);
+            $this->dataDriver->addDocuments($documents);
+        }
+
+        if ($update) {
+            while ($documentsToDelete = $this->storage->getItemsToDelete()) {
+                $this->dataDriver->removeDocuments($documentsToDelete);
             }
-        }
-
-        if ($this->poolSize) {
-            $this->sendPool();
-        }
-
-        while ($documentsToDelete = $this->storage->getItemsToDelete()) {
-            $this->dataDriver->removeDocuments($documentsToDelete);
         }
 
         $this->dataDriver->finish();
@@ -305,39 +254,8 @@ class SimpleDataProvider implements DataProviderInterface, ServiceManagerAwareIn
     }
 
     /**
-     * Adds document into pool, if pool is full it pushes documents into DataDriver
      *
-     * @param mixed $document
-     */
-    protected function addToPool($document)
-    {
-        array_push($this->pool, $document);
-
-        if (count($this->pool) >= $this->poolSize) {
-            $this->sendPool();
-        }
-    }
-
-    /**
-     * Sends documents of pool
-     *
-     * @return void
-     */
-    protected function sendPool()
-    {
-        $this->preparePool();
-        if (empty($this->pool)) {
-            return;
-        }
-
-        $this->dataDriver->addDocuments($this->pool);
-
-        $this->pool = array();
-    }
-
-    /**
-     *
-     * @param DataDriverInterface $driver
+     * @param DataDriverInterface $dataDriver
      */
     public function setDataDriver(DataDriverInterface $dataDriver)
     {
@@ -346,26 +264,16 @@ class SimpleDataProvider implements DataProviderInterface, ServiceManagerAwareIn
 
     /**
      *
-     * @return void
+     * @param DocumentSet $documents
+     * @return DocumentSet
      */
-    protected function preparePool()
+    protected function prepareDocuments(DocumentSet $documents)
     {
-        foreach ($this->pool as $id => $document) {
-            $document = $this->prepareDocument($document);
-            if (false === $document) {
-                unset($this->pool[$id]);
-            }
+        foreach ($documents as $document) {
+            $this->filters($document);
         }
-    }
 
-    /**
-     *
-     * @param mixed $document
-     * @return mixed
-     */
-    protected function prepareDocument($document)
-    {
-        return $this->filters($document);
+        return $documents;
     }
 
     /**

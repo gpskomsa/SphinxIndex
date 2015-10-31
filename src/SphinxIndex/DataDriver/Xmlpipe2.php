@@ -7,6 +7,8 @@ use Zend\Filter;
 
 use SphinxIndex\DataDriver\DataDriverInterface;
 use SphinxIndex\Filter\StripBadXmlUtf8;
+use SphinxIndex\Entity\DocumentSet;
+use SphinxIndex\Entity\Document;
 
 class Xmlpipe2 implements DataDriverInterface
 {
@@ -32,13 +34,6 @@ class Xmlpipe2 implements DataDriverInterface
     protected $sections = array();
 
     /**
-     * To escape a string attribute or not from HTML tags
-     *
-     * @var boolean
-     */
-    protected $escapeString = false;
-
-    /**
      * Unique field of document that contains the document id
      *
      * @var string
@@ -53,29 +48,46 @@ class Xmlpipe2 implements DataDriverInterface
     protected $badUtf8Filter = null;
 
     /**
-     *
-     * @param array $params
+     * @param string $indexConfig
+     * @param array $options
      */
-    public function __construct($params)
+    public function __construct($indexConfig, array $options = array())
     {
-        if (is_string($params)) {
-            $params = Config\Factory::fromFile($params);
+        $this->parse($indexConfig);
+        $this->setOptions($options);
+    }
+
+    /**
+     *
+     * @param string $indexConfig
+     * @return Xmlpipe2
+     * @throws \Exception
+     */
+    protected function parse($indexConfig)
+    {
+        $data = Config\Factory::fromFile($indexConfig);
+
+        foreach ($data as $key => $value) {
+            switch ($key) {
+                case 'fields':
+                    $this->fields = $value;
+                    break;
+                case 'attributes':
+                    $this->attributes = $value;
+                    break;
+                default:
+                    throw new \Exception('unknown option ' . $key);
+                    break;
+            }
         }
 
-        if ($params instanceof Zend\Config\Config) {
-            $params = $params->toArray();
-        }
-
-        if (!is_array($params)) {
-            throw new \Exception('invalid param options type');
-        }
-
-        $this->setOptions($params);
+        return $this;
     }
 
     /**
      *
      * @param array $options
+     * @return Xmlpipe2
      */
     public function setOptions(array $options)
     {
@@ -83,30 +95,38 @@ class Xmlpipe2 implements DataDriverInterface
             $method = 'set' . ucfirst($key);
             if (method_exists($this, $method)) {
                 call_user_func_array(array($this, $method), array($value));
-            } elseif(property_exists($this, $key)) {
-                $this->{$key} = $value;
             }
         }
+
+        return $this;
+    }
+
+    /**
+     *
+     * @param string $docIdField
+     * @return Xmlpipe2
+     */
+    public function setDocIdField($docIdField)
+    {
+        $this->docIdField = $docIdField;
+
+        return $this;
     }
 
     /**
      * Prints the xml-layout of sphinx document into STDOUT
      *
-     * @param mixed $documents
+     * @param DocumentSet $documents
      */
-    public function addDocuments($documents)
+    public function addDocuments(DocumentSet $documents)
     {
-        if (!is_array($documents) && !($documents instanceof \Traversable)) {
-            throw new Exception('documents are not traversable using foreach');
-        }
-
         foreach ($documents as $document) {
-            if (!isset($document[$this->docIdField])) {
+            if (!isset($document->{$this->docIdField})) {
                 //throw new \Exception('document id must be set');
                 continue;
             }
 
-            echo $this->getDocument($document[$this->docIdField], $document);
+            echo $this->getDocumentXML($document->{$this->docIdField}, $document);
         }
     }
 
@@ -153,21 +173,18 @@ class Xmlpipe2 implements DataDriverInterface
     /**
      * Return the xml of a single document
      *
-     * @param integer$id
-     * @param mixed $data
+     * @param integer $id
+     * @param Document $document
      * @return string
      */
-    public function getDocument($id, $data)
+    public function getDocumentXML($id, Document $document)
     {
         $buffer = '<sphinx:document id="' . (integer) $id . '">' . "\n";
 
         foreach ($this->sections as $name => $params) {
-            $value = isset($data[$name]) ? $data[$name] : null;
+            $value = isset($document->{$name}) ? $document->{$name} : null;
             if (!isset($params['type']) || 'string' === $params['type']) {
                 $value = $this->getBadUtf8Filter()->filter($value);
-            }
-            if (isset($params['type']) && 'string' === $params['type'] && $this->escapeString) {
-                $value = htmlspecialchars($value);
             }
 
             $buffer .= "<$name><![CDATA[" . $value . "]]></$name>\n";
@@ -181,21 +198,17 @@ class Xmlpipe2 implements DataDriverInterface
     /**
      * Prints the xml of sphinx kill-list
      *
-     * @param Traversable $data
+     * @param DocumentSet $documents
      */
-    public function removeDocuments($data)
+    public function removeDocuments(DocumentSet $documents)
     {
-        if (!is_array($data) && !($data instanceof \Traversable)) {
-            throw new \Exception('document must be permissible for foreach');
-        }
-
         $ids = array();
-        foreach ($data as $document) {
-            if (!isset($document[$this->docIdField])) {
+        foreach ($documents as $document) {
+            if (!isset($document->{$this->docIdField})) {
                 throw new \Exception('document must contain ID field');
             }
 
-            $ids[] = $document[$this->docIdField];
+            $ids[] = $document->{$this->docIdField};
         }
 
         echo $this->getKilllist($ids);

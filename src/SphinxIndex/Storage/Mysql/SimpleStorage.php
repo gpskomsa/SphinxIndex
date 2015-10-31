@@ -18,6 +18,7 @@ use SphinxIndex\Storage\RangeProvider\RangeProviderInterface;
 use SphinxIndex\Storage\ControlPoint\ControlPointManagerInterface;
 use SphinxIndex\Storage\Mysql\Chunk;
 use SphinxIndex\Storage\Stated;
+use SphinxIndex\Entity\DocumentSet;
 
 class SimpleStorage implements StorageInterface, ControlPointUsingInterface, RangedInterface
 {
@@ -80,16 +81,28 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
 
     /**
      *
+     * @var DocumentSet
+     */
+    protected $documentSetProto = null;
+
+    /**
+     *
      * @param Adapter $adapter
+     * @param DocumentSet $documentSetProto
      * @param array $options
      */
     public function __construct(
         Adapter $adapter,
+        DocumentSet $documentSetProto = null,
         array $options = array()
     )
     {
         $this->setAdapter($adapter);
         unset($options['adapter']);
+
+        if ($documentSetProto) {
+            $this->documentSetProto = $documentSetProto;
+        }
 
         $this->setOptions($options);
     }
@@ -130,6 +143,19 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
         $this->emptyLastRange = (boolean) $value;
 
         return $this;
+    }
+
+    /**
+     *
+     * @return DocumentSet
+     */
+    public function getDocumentSetProto()
+    {
+        if (null === $this->documentSetProto) {
+            $this->documentSetProto = new DocumentSet();
+        }
+
+        return $this->documentSetProto;
     }
 
     /**
@@ -243,7 +269,7 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
 
     /**
      * {@inheritdoc}
-     * @return ResultSet
+     * @return DocumentSet
      */
     public function getItems()
     {
@@ -268,7 +294,8 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
 
         $this->state(__FUNCTION__, true);
 
-        return $rows;
+        $documents = clone $this->getDocumentSetProto();
+        return $documents->set($rows);
     }
 
     /**
@@ -368,7 +395,8 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
 
         $this->state(__FUNCTION__, true);
 
-        return $rows;
+        $documents = clone $this->getDocumentSetProto();
+        return $documents->set($rows);
     }
 
     /**
@@ -438,7 +466,8 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
 
         $this->state(__FUNCTION__, true);
 
-        return $rows;
+        $documents = clone $this->getDocumentSetProto();
+        return $documents->set($rows);
     }
 
     /**

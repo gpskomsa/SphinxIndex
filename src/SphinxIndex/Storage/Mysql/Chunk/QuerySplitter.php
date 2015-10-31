@@ -43,6 +43,9 @@ class QuerySplitter implements SplitterInterface
         $min = 0;
         for ($i = 0; $i < $chunkCount; $i++) {
             $max = $this->query->getMaxIdForChunk($countForChunk, $min);
+            if ($i + 1 >= $chunkCount) {
+                $max = -1;
+            }
             $chunks[] = array($min, $max);
             if (-1 === $max) {
                 break;

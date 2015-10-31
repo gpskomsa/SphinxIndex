@@ -5,6 +5,8 @@ namespace SphinxIndex\DataDriver;
 use SphinxIndex\DataDriver\DataDriverInterface;
 use SphinxConfig\Entity\Config;
 
+use SphinxIndex\Entity\DocumentSet;
+
 class RT implements DataDriverInterface
 {
     /**
@@ -58,7 +60,7 @@ class RT implements DataDriverInterface
     }
 
     /**
-     * Determines fields and attributes set from the index config
+     * Determines fields and attribute set from the index config
      */
     protected function setScheme()
     {
@@ -91,11 +93,37 @@ class RT implements DataDriverInterface
     /**
      *
      * {@inheritdoc}
-     * @todo need to be implemented
      */
-    public function addDocuments($documents)
+    public function addDocuments(DocumentSet $documents)
     {
-        throw new \Exception('not emplemented yet');
+        $values = array();
+        foreach ($documents as $document) {
+            $documentValues = array();
+            foreach ($document->getValues() as $key => $value) {
+                if (!in_array($key, $this->keys)) {
+                    continue;
+                }
+
+                if ((in_array($key, $this->fields)
+                    || in_array($key, $this->attributes['string']))) {
+                    $value = "'" . str_replace(
+                        array('\\', '\''),
+                        array('\\\\', '\\\''),
+                        $value
+                    ) . "'";
+                }
+
+                $documentValues[] = $value;
+            }
+
+            $values[] = "(" . implode(',', $documentValues) . ")";
+        }
+
+        $sql = sprintf(
+            "REPLACE INTO %s (%s) VALUES\n", $this->index, implode(',', $this->keys)
+        ) . implode(",\n", $values) . ";\n";
+
+        echo $sql;
     }
 
     /**
@@ -103,7 +131,7 @@ class RT implements DataDriverInterface
      * {@inheritdoc}
      * @todo need to be implemented
      */
-    public function removeDocuments($documents)
+    public function removeDocuments(DocumentSet $documents)
     {
         throw new \Exception('not emplemented yet');
     }

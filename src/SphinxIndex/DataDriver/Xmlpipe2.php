@@ -34,13 +34,6 @@ class Xmlpipe2 implements DataDriverInterface
     protected $sections = array();
 
     /**
-     * Unique field of document that contains the document id
-     *
-     * @var string
-     */
-    protected $docIdField = 'id';
-
-    /**
      * Special filters for filtering bad utf8 text from string attributes
      *
      * @var Filter\FilterInterface
@@ -102,18 +95,6 @@ class Xmlpipe2 implements DataDriverInterface
     }
 
     /**
-     *
-     * @param string $docIdField
-     * @return Xmlpipe2
-     */
-    public function setDocIdField($docIdField)
-    {
-        $this->docIdField = $docIdField;
-
-        return $this;
-    }
-
-    /**
      * Prints the xml-layout of sphinx document into STDOUT
      *
      * @param DocumentSet $documents
@@ -121,12 +102,12 @@ class Xmlpipe2 implements DataDriverInterface
     public function addDocuments(DocumentSet $documents)
     {
         foreach ($documents as $document) {
-            if (!isset($document->{$this->docIdField})) {
+            if (!isset($document->id)) {
                 //throw new \Exception('document id must be set');
                 continue;
             }
 
-            echo $this->getDocumentXML($document->{$this->docIdField}, $document);
+            echo $this->getDocumentXML($document->id, $document);
         }
     }
 
@@ -204,11 +185,11 @@ class Xmlpipe2 implements DataDriverInterface
     {
         $ids = array();
         foreach ($documents as $document) {
-            if (!isset($document->{$this->docIdField})) {
+            if (!isset($document->id)) {
                 throw new \Exception('document must contain ID field');
             }
 
-            $ids[] = $document->{$this->docIdField};
+            $ids[] = $document->id;
         }
 
         echo $this->getKilllist($ids);

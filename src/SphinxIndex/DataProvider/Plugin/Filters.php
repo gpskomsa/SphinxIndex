@@ -100,16 +100,16 @@ class Filters extends AbstractPlugin
     public function filter(Document $document)
     {
         foreach ($this->fieldFilters as $field => $data) {
-            if (!isset($document[$data['field']])) {
-                $document[$data['field']] = null;
+            if (!isset($document->{$data['field']})) {
+                $document->{$data['field']} = null;
             }
 
-            $value = $document[$data['field']];
+            $value = $document->{$data['field']};
             foreach ($data['filters'] as $filter) {
                 $value = $filter->filter($value);
             }
 
-            $document[$field] = $value;
+            $document->{$field} = $value;
         }
 
         return $document;

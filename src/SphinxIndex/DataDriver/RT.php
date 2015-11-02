@@ -80,14 +80,20 @@ class RT implements DataDriverInterface
             'string' => (array) $section->rt_attr_string,
         );
 
-        $keys = array_merge(array('id'), $this->fields);
-        foreach ($this->attributes as $attrs) {
-            if (!empty($attrs)) {
-                $keys = array_merge($keys, $attrs);
+        $keys = array('id' => 'uint');
+        foreach ($this->fields as $field) {
+            $keys[$field] = 'string';
+        }
+
+        foreach ($this->attributes as $type => $attrs) {
+            foreach ($attrs as $attr) {
+                if (!isset($keys[$attr])) {
+                    $keys[$attr] = $type;
+                }
             }
         }
 
-        $this->keys = array_unique($keys);
+        $this->keys = $keys;
     }
 
     /**
@@ -96,34 +102,44 @@ class RT implements DataDriverInterface
      */
     public function addDocuments(DocumentSet $documents)
     {
-        $values = array();
+        $documentFieldsTxt = implode(',', array_keys($this->keys));
         foreach ($documents as $document) {
             $documentValues = array();
-            foreach ($document->getValues() as $key => $value) {
-                if (!in_array($key, $this->keys)) {
-                    continue;
-                }
+            foreach ($this->keys as $key => $type) {
+                if (isset($document->{$key})) {
+                    $value = $document->{$key};
+                    if ('string' === $type) {
+                        $value = "'" . str_replace(
+                            array('\\', '\''),
+                            array('\\\\', '\\\''),
+                            $value
+                        ) . "'";
+                    }
 
-                if ((in_array($key, $this->fields)
-                    || in_array($key, $this->attributes['string']))) {
-                    $value = "'" . str_replace(
-                        array('\\', '\''),
-                        array('\\\\', '\\\''),
-                        $value
-                    ) . "'";
+                    $documentValues[] = $value;
+                } else {
+                    switch ($type) {
+                        case 'uint':
+                        case 'bigint':
+                        case 'float':
+                            $documentValues[] = 0;
+                            break;
+                        default:
+                            $documentValues[] = '';
+                            break;
+                    }
                 }
-
-                $documentValues[] = $value;
             }
 
-            $values[] = "(" . implode(',', $documentValues) . ")";
+            $sql = sprintf(
+                "REPLACE INTO %s (%s) VALUES (%s);\n",
+                $this->index,
+                $documentFieldsTxt,
+                implode(',', $documentValues)
+            );
+
+            echo $sql;
         }
-
-        $sql = sprintf(
-            "REPLACE INTO %s (%s) VALUES\n", $this->index, implode(',', $this->keys)
-        ) . implode(",\n", $values) . ";\n";
-
-        echo $sql;
     }
 
     /**

@@ -270,7 +270,9 @@ class SimpleDataProvider implements DataProviderInterface, ServiceManagerAwareIn
     protected function prepareDocuments(DocumentSet $documents)
     {
         foreach ($documents as $document) {
-            $this->filters($document);
+            foreach ($this->pluginOptions as $plugin => $options) {
+                $this->{$plugin}($document);
+            }
         }
 
         return $documents;

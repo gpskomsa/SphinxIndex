@@ -21,6 +21,7 @@ class PluginManager extends AbstractPluginManager
      */
     protected $invokableClasses = array(
         'filters'  => 'SphinxIndex\DataProvider\Plugin\Filters',
+        'rename'   => 'SphinxIndex\DataProvider\Plugin\Rename',
     );
 
     /**

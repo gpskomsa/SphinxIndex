@@ -115,7 +115,7 @@ class SimpleDataProvider implements DataProviderInterface, ServiceManagerAwareIn
     public function getPluginManager()
     {
         if (null === $this->plugins) {
-            $this->setPluginManager($this->serviceManager->get('SphinxIndex\DataProviderPluginManager'));
+            $this->setPluginManager($this->serviceManager->get('SphinxIndex\DataProvider\PluginManager'));
         }
 
         return $this->plugins;

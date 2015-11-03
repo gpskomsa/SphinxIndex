@@ -4,9 +4,21 @@ namespace SphinxIndex;
 use Zend\ModuleManager\Feature\ConsoleUsageProviderInterface;
 use Zend\Console\Adapter\AdapterInterface as Console;
 use Zend\Mvc\MvcEvent;
+use Zend\ModuleManager\ModuleManager;
 
 class Module implements ConsoleUsageProviderInterface
 {
+    public function init(ModuleManager $moduleManager)
+    {
+        $sm = $moduleManager->getEvent()->getParam('ServiceManager');
+        $sm->get('ServiceListener')->addServiceManager(
+            'SphinxIndex\DataProvider\PluginManager',
+            'data_provider_plugin_manager_config',
+            'SphinxIndex\DataProvider\Service\PluginManagerProviderInterface',
+            'getDataProviderPluginConfig'
+        );
+    }
+
     public function onBootstrap(MvcEvent $e)
     {}
 
@@ -61,7 +73,7 @@ class Module implements ConsoleUsageProviderInterface
                 'SphinxIndex\IndexFactory' => function($sm) {
                     return new Index\IndexFactory($sm->get('SphinxIndexModuleOptions'));
                 },
-                'SphinxIndex\DataProviderPluginManager' => 'SphinxIndex\DataProvider\Service\PluginManagerFactory',
+                'SphinxIndex\DataProvider\PluginManager' => 'SphinxIndex\DataProvider\Service\PluginManagerFactory',
             ),
             'abstract_factories' => array(
                 'SphinxIndex\Redis\Adapter\AbstractFactory',

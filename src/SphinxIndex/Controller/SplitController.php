@@ -14,7 +14,10 @@ class SplitController extends AbstractActionController
     public function splitAction()
     {
         $indexName = (string) $this->params()->fromRoute('index');
-        $index = $this->getServiceLocator()->get("SphinxIndex\\Index\\Index\\" . $indexName);;
+        $index = $this->getServiceLocator()
+                ->get('SphinxIndex\Index\IndexManager')
+                ->get($indexName);
+
         if (!$index->isDistributed()) {
             throw new \Exception("index '$indexName' not distributed");
         }

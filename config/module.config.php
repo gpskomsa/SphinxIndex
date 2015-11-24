@@ -7,7 +7,7 @@ return array(
                 'sphinxindex_set' => array(
                     'type' => 'simple',
                     'options' => array(
-                        'route'    => 'index (build|update):command <index>',
+                        'route'    => 'index (build|update):command [--chunk=] <index>',
                         'defaults' => array(
                             'controller'    => 'SphinxIndex\Index',
                             'action'        => 'index',

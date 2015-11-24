@@ -4,16 +4,13 @@ namespace SphinxIndex\DataProvider;
 
 use Zend\EventManager\EventManager;
 use Zend\EventManager\EventManagerInterface;
-use Zend\ServiceManager\ServiceManagerAwareInterface;
-use Zend\ServiceManager\ServiceManager;
+use Zend\EventManager\ListenerAggregateInterface;
 
 use SphinxIndex\Storage\StorageInterface;
-use SphinxIndex\DataDriver\DataDriverInterface;
 use SphinxIndex\Storage\ControlPointUsingInterface;
-
 use SphinxIndex\Entity\DocumentSet;
 
-class SimpleDataProvider implements DataProviderInterface, ServiceManagerAwareInterface
+class SimpleDataProvider implements DataProviderInterface
 {
     /**
      * Storage object
@@ -21,13 +18,6 @@ class SimpleDataProvider implements DataProviderInterface, ServiceManagerAwareIn
      * @var StorageInterface
      */
     protected $storage = null;
-
-    /**
-     * Driver object
-     *
-     * @var DataDriverInterface
-     */
-    protected $dataDriver = null;
 
     /**
      *
@@ -43,30 +33,16 @@ class SimpleDataProvider implements DataProviderInterface, ServiceManagerAwareIn
 
     /**
      *
-     * @var ServiceManager
-     */
-    protected $serviceManager = null;
-
-    /**
-     *
-     * @var array
-     */
-    protected $pluginOptions = array();
-
-    /**
-     *
      * @param StorageInterface $storage
-     * @param DataDriverInterface $driver
+     * @param array $options
+     * @param integer $chunkId
      */
     public function __construct(
         StorageInterface $storage,
-        DataDriverInterface $dataDriver,
         array $options = array()
     )
     {
         $this->setStorage($storage);
-        $this->setDataDriver($dataDriver);
-
         $this->setOptions($options);
     }
 
@@ -89,23 +65,49 @@ class SimpleDataProvider implements DataProviderInterface, ServiceManagerAwareIn
 
     /**
      *
-     * @param ServiceManager $serviceManager
+     * @param array|ListenerAggregateInterface $listeners
      * @return SimpleDataProvider
      */
-    public function setServiceManager(ServiceManager $serviceManager)
+    public function attachListeners($listeners)
     {
-        $this->serviceManager = $serviceManager;
+        if (!is_array($listeners)) {
+            $listeners = array($listeners);
+        }
+
+        foreach ($listeners as $key => $listener) {
+            if (is_string($key)) {
+                if ($this->getPluginManager()->has($key)) {
+                    $listener = $this->getPluginManager()->get(
+                        $key,
+                        is_array($listener) ? $listener : array()
+                    );
+                } elseif (class_exists($key)) {
+                    if (is_array($listener)) {
+                        $ref = new \ReflectionClass($key);
+                        $listener = $ref->newInstanceArgs(array($listener));
+                    } else {
+                        $listener = new $key();
+                    }
+                } else {
+                    throw new \RuntimeException(
+                        sprintf(
+                            'Expecting string listener to be valid class name; received "%s"',
+                            $key
+                        )
+                    );
+                }
+            }
+
+            if (!$listener instanceof ListenerAggregateInterface) {
+                throw new \RuntimeException(
+                    'listener is not instance of ListenerAggregateInterface'
+                );
+            }
+
+            $this->getEventManager()->attachAggregate($listener);
+        }
 
         return $this;
-    }
-
-    /**
-     *
-     * @return ServiceManager
-     */
-    public function getServiceManager()
-    {
-        return $this->serviceManager;
     }
 
     /**
@@ -115,7 +117,7 @@ class SimpleDataProvider implements DataProviderInterface, ServiceManagerAwareIn
     public function getPluginManager()
     {
         if (null === $this->plugins) {
-            $this->setPluginManager($this->serviceManager->get('SphinxIndex\DataProvider\PluginManager'));
+            $this->setPluginManager(new PluginManager());
         }
 
         return $this->plugins;
@@ -135,18 +137,6 @@ class SimpleDataProvider implements DataProviderInterface, ServiceManagerAwareIn
     }
 
     /**
-     *
-     * @param array $pluginOptions
-     * @return SimpleDataProvider
-     */
-    public function setPluginOptions(array $pluginOptions)
-    {
-        $this->pluginOptions = $pluginOptions;
-
-        return $this;
-    }
-
-    /**
      * Proxy for plugin call
      *
      * @param string $name
@@ -155,10 +145,6 @@ class SimpleDataProvider implements DataProviderInterface, ServiceManagerAwareIn
      */
     public function plugin($name, array $options = null)
     {
-        if (null === $options && isset($this->pluginOptions[$name])) {
-            $options = $this->pluginOptions[$name];
-        }
-
         return $this->getPluginManager()->get($name, $options);
     }
 
@@ -210,69 +196,75 @@ class SimpleDataProvider implements DataProviderInterface, ServiceManagerAwareIn
     }
 
     /**
-     * 
-     * Gets data from storage, prepare it and transfer into DataDriver
+     * Returns prepared documents from storage to insert into index
+     *
+     * @param integer|null $chunkId
+     * @return DocumentSet
      */
-    public function setDocuments()
+    public function getDocumentsToInsert($chunkId = null)
     {
-        $this->processDocuments();
+        return $this->processDocuments(false, $chunkId);
     }
 
     /**
-     * 
-     * Gets data from storage, prepare it and transfer into pool
+     * Returns prepared documents from storage to update in index
+     *
+     * @param integer|null $chunkId
+     * @return DocumentSet
      */
-    public function updateDocuments()
+    public function getDocumentsToUpdate($chunkId = null)
     {
-        $this->processDocuments(true);
+        return $this->processDocuments(true, $chunkId);
     }
 
     /**
      *
      * @param boolean $update
-     */
-    protected function processDocuments($update = false)
-    {
-        $this->dataDriver->init();
-
-        while($documents = $this->storage->getItems()) {
-            $this->prepareDocuments($documents);
-            $this->dataDriver->addDocuments($documents);
-        }
-
-        if ($update) {
-            while ($documentsToDelete = $this->storage->getItemsToDelete()) {
-                $this->dataDriver->removeDocuments($documentsToDelete);
-            }
-        }
-
-        $this->dataDriver->finish();
-
-        if ($this->storage instanceof ControlPointUsingInterface) {
-            $this->storage->markControlPoint();
-        }
-    }
-
-    /**
-     *
-     * @param DataDriverInterface $dataDriver
-     */
-    public function setDataDriver(DataDriverInterface $dataDriver)
-    {
-        $this->dataDriver = $dataDriver;
-    }
-
-    /**
-     *
-     * @param DocumentSet $documents
+     * @param integer $chunkId
      * @return DocumentSet
      */
-    protected function prepareDocuments(DocumentSet $documents)
+    protected function processDocuments($update = false, $chunkId = null)
     {
-        foreach ($documents as $document) {
-            foreach ($this->pluginOptions as $plugin => $options) {
-                $this->{$plugin}($document);
+        if ($update) {
+            $documents = $this->storage->getItemsToUpdate($chunkId);
+        } else {
+            $documents = $this->storage->getItems($chunkId);
+        }
+
+        if ($documents) {
+            $this->getEventManager()->trigger(
+                $update ? self::EVENT_DOCUMENTS_TO_UPDATE : self::EVENT_DOCUMENTS_TO_INSERT,
+                $this,
+                array(
+                    'documents' => $documents,
+                )
+            );
+        } else {
+            if ($this->storage instanceof ControlPointUsingInterface) {
+                $this->storage->markControlPoint();
             }
+        }
+
+        return $documents;
+    }
+
+    /**
+     * Returns prepared documents from storage to delete from index
+     *
+     * @param integer|null $chunkId
+     * @return DocumentSet
+     */
+    public function getDocumentsToDelete($chunkId = null)
+    {
+        $documents = $this->storage->getItemsToDelete($chunkId);
+        if ($documents) {
+            $this->getEventManager()->trigger(
+                self::EVENT_DOCUMENTS_TO_DELETE,
+                $this,
+                array(
+                    'documents' => $documents,
+                )
+            );
         }
 
         return $documents;

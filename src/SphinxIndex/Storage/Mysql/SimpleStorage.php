@@ -271,7 +271,7 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
      * {@inheritdoc}
      * @return DocumentSet
      */
-    public function getItems()
+    public function getItems($chunkId = null)
     {
         if ($this->state(__FUNCTION__)) {
             $this->state(__FUNCTION__, false);
@@ -283,7 +283,7 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
         $this->setFrom($select);
         $this->getBaseColumnSelect($select);
 
-        $this->applyConditionsForRange($select);
+        $this->applyConditionsForRange($select, $chunkId);
         $this->applyConditionsForValidDocs($select);
         $this->applyDataJoins($select);
 
@@ -311,11 +311,12 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
      * Apply range condition to Select
      *
      * @param Select $select
+     * @param integer|null $chunkId
      * @return AbstractStorage
      */
-    protected function applyConditionsForRange(Select $select)
+    protected function applyConditionsForRange(Select $select, $chunkId = null)
     {
-        $range = $this->ranger ? $this->ranger->getRange() : array(0, -1);
+        $range = $this->ranger ? $this->ranger->getRange($chunkId) : array(0, -1);
 
         $custom = new Where();
         $custom->greaterThan('main.' . $this->getProperty('docIdField'), $range[0]);
@@ -366,7 +367,7 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
      * {@inheritdoc}
      * @return ResultSet
      */
-    public function getItemsToUpdate()
+    public function getItemsToUpdate($chunkId = null)
     {
         if ($this->state(__FUNCTION__)) {
             $this->state(__FUNCTION__, false);
@@ -383,7 +384,7 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
         $this->setFrom($select);
         $this->getBaseColumnSelect($select);
 
-        $this->applyConditionsForRange($select);
+        $this->applyConditionsForRange($select, $chunkId);
         $this->applyConditionsForLastDate($select, $lastDate);
 
         $this->applyConditionsForValidDocs($select);
@@ -434,7 +435,7 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
      * {@inheritdoc}
      * @return ResultSet
      */
-    public function getItemsToDelete()
+    public function getItemsToDelete($chunkId = null)
     {
         if ($this->state(__FUNCTION__)) {
             $this->state(__FUNCTION__, false);
@@ -455,7 +456,7 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
             )
         );
 
-        $this->applyConditionsForRange($select);
+        $this->applyConditionsForRange($select, $chunkId);
         $this->applyConditionsForLastDate($select, $lastDate);
         $this->applyConditionsForInvalidDocs($select);
 

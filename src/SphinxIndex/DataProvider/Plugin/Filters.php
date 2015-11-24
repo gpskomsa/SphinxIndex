@@ -3,11 +3,20 @@
 namespace SphinxIndex\DataProvider\Plugin;
 
 use Zend\Filter\FilterInterface;
+use Zend\EventManager\EventManagerInterface;
+use Zend\EventManager\ListenerAggregateInterface;
+use Zend\EventManager\EventInterface;
 
-use SphinxIndex\Entity\Document;
+use SphinxIndex\DataProvider\SimpleDataProvider;
 
-class Filters extends AbstractPlugin
+class Filters extends AbstractPlugin implements ListenerAggregateInterface
 {
+    /**
+     *
+     * @var array
+     */
+    protected $listeners = array();
+
     /**
      * Filters data.
      * array(
@@ -70,48 +79,57 @@ class Filters extends AbstractPlugin
 
     /**
      *
-     * @return array
+     * @param EventManagerInterface $events
      */
-    public function getFieldFilters()
+    public function attach(EventManagerInterface $events)
     {
-        return $this->fieldFilters;
+        $this->listeners[] = $events->attach(
+            array(
+                SimpleDataProvider::EVENT_DOCUMENTS_TO_INSERT,
+                SimpleDataProvider::EVENT_DOCUMENTS_TO_UPDATE
+            ),
+            array($this, 'filter')
+        );
     }
 
     /**
      *
-     * @param Document $document
-     * @return Filters|Document
+     * @param EventManagerInterface $events
      */
-    public function __invoke(Document $document = null)
+    public function detach(EventManagerInterface $events)
     {
-        if (null === $document) {
-            return $this;
+        foreach ($this->listeners as $key => $handler) {
+            $events->detach($handler);
+            unset($this->listeners[$key]);
         }
 
-        return $this->filter($document);
+        $this->listeners = array();
     }
 
     /**
      * Filters fields and attributes of document
      *
-     * @param Document $document
-     * @return Document
+     * @param EventInterface $e
+     * @return EventInterface
      */
-    public function filter(Document $document)
+    public function filter(EventInterface $e)
     {
-        foreach ($this->fieldFilters as $field => $data) {
-            if (!isset($document->{$data['field']})) {
-                $document->{$data['field']} = null;
-            }
+        $documents = $e->getParam('documents');
+        foreach ($documents as $document) {
+            foreach ($this->fieldFilters as $field => $data) {
+                if (!isset($document->{$data['field']})) {
+                    $document->{$data['field']} = null;
+                }
 
-            $value = $document->{$data['field']};
-            foreach ($data['filters'] as $filter) {
-                $value = $filter->filter($value);
-            }
+                $value = $document->{$data['field']};
+                foreach ($data['filters'] as $filter) {
+                    $value = $filter->filter($value);
+                }
 
-            $document->{$field} = $value;
+                $document->{$field} = $value;
+            }
         }
 
-        return $document;
+        return $e;
     }
 }

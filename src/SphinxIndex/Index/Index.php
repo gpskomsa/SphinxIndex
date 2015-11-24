@@ -4,8 +4,9 @@ namespace SphinxIndex\Index;
 
 use SphinxIndex\DataProvider\DataProviderInterface;
 use SphinxIndex\Storage\RangedInterface;
+use SphinxIndex\DataDriver\DataDriverInterface;
 
-use SphinxConfig\Entity\Config;
+use SphinxConfig\Entity\Config\Section;
 
 class Index
 {
@@ -22,18 +23,11 @@ class Index
     protected $distributed = false;
 
     /**
-     * Config of indexer tool
+     * Section of index in config
      *
-     * @var Config
+     * @var Section
      */
-    protected $indexerConfig = null;
-
-    /**
-     * Index name
-     *
-     * @var string
-     */
-    protected $indexName = null;
+    protected $indexerConfigSection = null;
 
     /**
      *
@@ -42,27 +36,45 @@ class Index
     protected $dataProvider = null;
 
     /**
-     * @param string $indexName
-     * @param Config $indexerConfig
+     * Driver object
+     *
+     * @var DataDriverInterface
+     */
+    protected $dataDriver = null;
+
+    /**
+     * @param Section $indexerConfigSection
      * @param DataProviderInterface $dataProvider
+     * @param DataDriverInterface $dataDriver
      * @param integer $indexType
      */
     public function __construct(
-        $indexName,
-        Config $indexerConfig,
+        Section $indexerConfigSection,
         DataProviderInterface $dataProvider,
+        DataDriverInterface $dataDriver,
         $indexType = self::INDEX_TYPE_MAIN
     )
     {
-        $this->indexName = $indexName;
-        $section = $indexerConfig->getSection('index', $this->indexName);
-        if ($section && $section->type === 'distributed') {
+        if ($indexerConfigSection->type === 'distributed') {
             $this->distributed = true;
         }
 
-        $this->indexerConfig = $indexerConfig;
+        $this->indexerConfigSection = $indexerConfigSection;
         $this->dataProvider = $dataProvider;
+        $this->setDataDriver($dataDriver);
         $this->type = (integer) $indexType;
+    }
+
+    /**
+     *
+     * @param DataDriverInterface $dataDriver
+     * @return \SphinxIndex\Index\Index
+     */
+    public function setDataDriver(DataDriverInterface $dataDriver)
+    {
+        $this->dataDriver = $dataDriver;
+
+        return $this;
     }
 
     /**
@@ -96,19 +108,32 @@ class Index
     /**
      * Builds index data
      *
+     * @param integer|null $chunkId
      * @return void
      */
-    public function build()
+    public function build($chunkId = null)
     {
-        if ($this->distributed) {
+        if (null === $chunkId && $this->distributed) {
             return;
         }
 
+        $this->dataDriver->init();
+
         if ($this->isDelta()) {
-            $this->dataProvider->updateDocuments();
+            while ($documents = $this->dataProvider->getDocumentsToUpdate($chunkId)) {
+                $this->dataDriver->addDocuments($documents);
+            }
+
+            while ($documentsToDelete = $this->storage->getDocumentsToDelete($chunkId)) {
+                $this->dataDriver->removeDocuments($documentsToDelete);
+            }
         } else {
-            $this->dataProvider->setDocuments();
+            while ($documents = $this->dataProvider->getDocumentsToInsert($chunkId)) {
+                $this->dataDriver->addDocuments($documents);
+            }
         }
+
+        $this->dataDriver->finish();
     }
 
     /**
@@ -129,8 +154,7 @@ class Index
             throw new \Exception('storage must implement RangedInterface');
         }
 
-        $section = $this->indexerConfig->getSection('index', $this->indexName);
-        $storage->split($section->getChunkCount());
+        $storage->split($this->indexerConfigSection->getChunkCount());
     }
 
     /**

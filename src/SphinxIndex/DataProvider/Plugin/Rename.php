@@ -2,10 +2,20 @@
 
 namespace SphinxIndex\DataProvider\Plugin;
 
-use SphinxIndex\Entity\Document;
+use Zend\EventManager\EventManagerInterface;
+use Zend\EventManager\ListenerAggregateInterface;
+use Zend\EventManager\EventInterface;
 
-class Rename extends AbstractPlugin
+use SphinxIndex\DataProvider\SimpleDataProvider;
+
+class Rename extends AbstractPlugin implements ListenerAggregateInterface
 {
+    /**
+     *
+     * @var array
+     */
+    protected $listeners = array();
+
     /**
      * Array of fields to rename.
      * array(
@@ -27,20 +37,56 @@ class Rename extends AbstractPlugin
     }
 
     /**
+     *
+     * @param EventManagerInterface $events
+     */
+    public function attach(EventManagerInterface $events)
+    {
+        $this->listeners[] = $events->attach(
+            array(
+                SimpleDataProvider::EVENT_DOCUMENTS_TO_INSERT,
+                SimpleDataProvider::EVENT_DOCUMENTS_TO_UPDATE
+            ),
+            array($this, 'rename')
+        );
+    }
+
+    /**
+     *
+     * @param EventManagerInterface $events
+     */
+    public function detach(EventManagerInterface $events)
+    {
+        foreach ($this->listeners as $key => $handler) {
+            $events->detach($handler);
+            unset($this->listeners[$key]);
+        }
+
+        $this->listeners = array();
+    }
+
+    /**
      * Renames fields of document
      *
-     * @param Document $document
-     * @return Document
+     * @param EventInterface $e
+     * @return EventInterface
      */
-    public function __invoke(Document $document)
+    public function rename(EventInterface $e)
     {
-        foreach ($this->fieldsNames as $target => $source) {
-            if (!isset($document->{$target})) {
-                $document->{$target} = $document->{$source};
-                unset($document->{$source});
+        if (empty($this->fieldsNames)) {
+            return $e;
+        }
+
+        $documents = $e->getParam('documents');
+        foreach ($documents as $document) {
+            foreach ($this->fieldsNames as $target => $source) {
+                if (!isset($document->{$target})) {
+                    $document->{$target} = $document->{$source};
+                    unset($document->{$source});
+                }
             }
         }
 
-        return $document;
+        return $e;
     }
 }

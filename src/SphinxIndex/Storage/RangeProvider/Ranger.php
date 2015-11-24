@@ -2,16 +2,16 @@
 
 namespace SphinxIndex\Storage\RangeProvider;
 
-use Zend\ServiceManager\ServiceManagerAwareInterface;
-use Zend\ServiceManager\ServiceManager;
 use Zend\EventManager\EventManager;
 use Zend\EventManager\EventManagerInterface;
 use Zend\Db\Adapter\Adapter;
 use Zend\Db\TableGateway\TableGateway;
 
+use SphinxConfig\Entity\Config\Section;
+use SphinxConfig\Entity\Config\Section\Chunked;
 use SphinxIndex\Storage\Chunks;
 
-class Ranger implements RangeProviderInterface, ServiceManagerAwareInterface
+class Ranger implements RangeProviderInterface
 {
     /**
      *
@@ -24,13 +24,6 @@ class Ranger implements RangeProviderInterface, ServiceManagerAwareInterface
      * @var TableGateway
      */
     protected $table = null;
-
-    /**
-     * Index name
-     *
-     * @var string
-     */
-    protected $index = null;
 
     /**
      * Sphinx server id
@@ -47,19 +40,26 @@ class Ranger implements RangeProviderInterface, ServiceManagerAwareInterface
 
     /**
      *
-     * @var ServiceManager
+     * @var Section
      */
-    protected $serviceManager = null;
+    protected $indexerConfigSection = null;
 
     /**
      *
      * @param Adapter $adapter
+     * @param Section $indexerConfigSection
+     * @param string $serverId
      * @param string $tableName
      */
     public function __construct(
         Adapter $adapter,
+        Section $indexerConfigSection,
+        $serverId,
         $tableName = null)
     {
+        $this->indexerConfigSection = $indexerConfigSection;
+        $this->serverId = $serverId;
+
         if ($tableName) {
             $this->tableName = $tableName;
         }
@@ -68,18 +68,6 @@ class Ranger implements RangeProviderInterface, ServiceManagerAwareInterface
             $this->tableName,
             $adapter
         );
-    }
-
-    /**
-     *
-     * @param ServiceManager $serviceManager
-     * @return Ranger
-     */
-    public function setServiceManager(ServiceManager $serviceManager)
-    {
-        $this->serviceManager = $serviceManager;
-
-        return $this;
     }
 
     /**
@@ -113,44 +101,30 @@ class Ranger implements RangeProviderInterface, ServiceManagerAwareInterface
     }
 
     /**
-     * Sets the index name for object
-     *
-     * @param type $mainIndex
-     * @return Ranger
-     */
-    public function setMainIndex($mainIndex)
-    {
-        $this->index = $mainIndex;
-
-        return $this;
-    }
-
-    /**
-     * Sets the sphinx server id
-     *
-     * @param string $serverId
-     * @return Ranger
-     */
-    public function setServerId($serverId)
-    {
-        $this->serverId = $serverId;
-
-        return $this;
-    }
-
-    /**
      * Gets range for current index name and current sphinx server id
      *
+     * @param integer $chunkId
+     * @return array
+     * @throws \RuntimeException
      */
-    public function getRange()
+    public function getRange($chunkId)
     {
-        if (null === $this->index) {
-            throw new \Exception('index must be set');
+        $section = $this->indexerConfigSection;
+        $index = $section->getName();
+        if (!$section instanceof Chunked || !$section->hasChunk($chunkId)) {
+            throw new \RuntimeException(
+                sprintf(
+                    "index %s is not distributed or has not chunk id %d",
+                    $index,
+                    $chunkId
+                )
+            );
         }
 
+        $chunkName = $section->getChunk($chunkId)->getName();
         $data = $this->table->select(
             array(
-                'index' => $this->index,
+                'index' => $chunkName,
                 'sphinx_server_id' => $this->serverId
             )
         )->current();
@@ -167,14 +141,12 @@ class Ranger implements RangeProviderInterface, ServiceManagerAwareInterface
      *
      * @param Chunks $ranges
      */
-    public function setRange(
-        Chunks $ranges
-    )
+    public function setRange(Chunks $ranges)
     {
-        $config = $this->serviceManager->get('IndexerConfig');
-        $section = $config->getSection('index', $this->index);
+        $section = $this->indexerConfigSection;
+        $index = $section->getName();
         if (!$section->hasChunks()) {
-            throw new \Exception('index ' . $this->index . ' is not distributed');
+            throw new \Exception('index ' . $index . ' is not distributed');
         }
 
         $names = $section->getChunkNames();
@@ -182,7 +154,7 @@ class Ranger implements RangeProviderInterface, ServiceManagerAwareInterface
 
         if ($namesCount !== count($ranges)) {
             throw new \Exception(
-                'index ' . $this->index . ' has ' . $namesCount
+                'index ' . $index . ' has ' . $namesCount
                 . ' chunks but ' . count($ranges) . ' ranges provided'
             );
         }

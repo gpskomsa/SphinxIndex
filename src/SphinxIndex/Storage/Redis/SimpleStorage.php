@@ -478,9 +478,10 @@ class SimpleStorage implements StorageInterface, RangedInterface
 
     /**
      *
+     * {@inheritdoc}
      * @return DocumentSet|false
      */
-    public function getItems()
+    public function getItems($chunkId = null)
     {
         $currentStart = $this->state(__FUNCTION__);
         if (false === $currentStart) {
@@ -488,7 +489,7 @@ class SimpleStorage implements StorageInterface, RangedInterface
         }
 
         $count = $this->getTotalCount();
-        $range = $this->ranger ? $this->ranger->getRange() : array(0, -1);
+        $range = $this->ranger ? $this->ranger->getRange($chunkId) : array(0, -1);
 
         if ($currentStart) {
             $start = $currentStart;
@@ -688,7 +689,7 @@ class SimpleStorage implements StorageInterface, RangedInterface
     /**
      * @todo Realize it
      */
-    public function getItemsToUpdate()
+    public function getItemsToUpdate($chunkId = null)
     {
         throw new \Exception('not implemented yet');
     }
@@ -696,7 +697,7 @@ class SimpleStorage implements StorageInterface, RangedInterface
     /**
      * @todo Realize it
      */
-    public function getItemsToDelete()
+    public function getItemsToDelete($chunkId = null)
     {
         throw new \Exception('not implemented yet');
     }

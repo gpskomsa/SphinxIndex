@@ -13,9 +13,16 @@ class Module implements ConsoleUsageProviderInterface
         $sm = $moduleManager->getEvent()->getParam('ServiceManager');
         $sm->get('ServiceListener')->addServiceManager(
             'SphinxIndex\DataProvider\PluginManager',
-            'data_provider_plugin_manager_config',
+            'sphinxindex_data_provider_plugin_manager_config',
             'SphinxIndex\DataProvider\Service\PluginManagerProviderInterface',
-            'getDataProviderPluginConfig'
+            'getSphinxIndexDataProviderPluginConfig'
+        );
+
+        $sm->get('ServiceListener')->addServiceManager(
+            'SphinxIndex\Index\IndexManager',
+            'sphinxindex_index_manager_config',
+            'SphinxIndex\Index\IndexManagerProviderInterface',
+            'getSphinxIndexManagerConfig'
         );
     }
 
@@ -81,6 +88,7 @@ class Module implements ConsoleUsageProviderInterface
             ),
             'invokables' => array(
                 'SphinxIndex\Redis' => '\Redis',
+                'SphinxIndex\Index\IndexManager' => 'SphinxIndex\Index\IndexManager',
             ),
             'shared' => array(
                 'SphinxIndex\Redis' => false,

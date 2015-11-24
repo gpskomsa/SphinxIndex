@@ -13,8 +13,12 @@ class IndexController extends AbstractActionController
     public function indexAction()
     {
         $indexName = (string) $this->params()->fromRoute('index');
+        $chunkId = (string) $this->params()->fromRoute('chunk', null);
         $command = $this->params()->fromRoute('command');
-        $index = $this->getServiceLocator()->get("SphinxIndex\\Index\\Index\\" . $indexName);
-        $index->{$command}();
+        $index = $this->getServiceLocator()
+                ->get('SphinxIndex\Index\IndexManager')
+                ->get($indexName);
+
+        $index->{$command}($chunkId);
     }
 }

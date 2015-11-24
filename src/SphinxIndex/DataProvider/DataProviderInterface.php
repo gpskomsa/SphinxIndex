@@ -3,22 +3,36 @@
 namespace SphinxIndex\DataProvider;
 
 use Zend\EventManager\EventManagerInterface;
-use Zend\ServiceManager\ServiceManager;
 
 use SphinxIndex\Storage\StorageInterface;
 use SphinxIndex\DataProvider\PluginManager;
 
 interface DataProviderInterface
 {
-    /**
-     * Sets documents of index
-     */
-    public function setDocuments();
+    const EVENT_DOCUMENTS_TO_INSERT = 'documentsToInsert';
+    const EVENT_DOCUMENTS_TO_UPDATE = 'documentsToUpdate';
+    const EVENT_DOCUMENTS_TO_DELETE = 'documentsToDelete';
 
     /**
-     * Updates documents of index
+     * Returns documents to insert into index
+     *
+     * @param integer|null $chunkId
      */
-    public function updateDocuments();
+    public function getDocumentsToInsert($chunkId = null);
+
+    /**
+     * Returns documents to update in index
+     *
+     * @param integer|null $chunkId
+     */
+    public function getDocumentsToUpdate($chunkId = null);
+
+    /**
+     * Returns documents to delete from index
+     *
+     * @param integer|null $chunkId
+     */
+    public function getDocumentsToDelete($chunkId = null);
 
     /**
      * Returns object of StorageInterface
@@ -35,9 +49,4 @@ interface DataProviderInterface
      * @return EventManagerInterface
      */
     public function getEventManager();
-
-    /**
-     * @return ServiceManager
-     */
-    public function getServiceManager();
 }

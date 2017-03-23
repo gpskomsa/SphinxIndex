@@ -124,7 +124,7 @@ class Index
                 $this->dataDriver->addDocuments($documents);
             }
 
-            while ($documentsToDelete = $this->storage->getDocumentsToDelete($chunkId)) {
+            while ($documentsToDelete = $this->dataProvider->getDocumentsToDelete($chunkId)) {
                 $this->dataDriver->removeDocuments($documentsToDelete);
             }
         } else {

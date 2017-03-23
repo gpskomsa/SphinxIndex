@@ -100,11 +100,11 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
         $this->setAdapter($adapter);
         unset($options['adapter']);
 
-        if ($documentSetProto) {
-            $this->documentSetProto = $documentSetProto;
-        }
-
         $this->setOptions($options);
+
+        if ($documentSetProto) {
+            $this->setDocumentSetProto($documentSetProto);
+        }
     }
 
     /**
@@ -152,10 +152,24 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
     public function getDocumentSetProto()
     {
         if (null === $this->documentSetProto) {
-            $this->documentSetProto = new DocumentSet();
+            $this->setDocumentSetProto(new DocumentSet());
         }
 
         return $this->documentSetProto;
+    }
+
+    /**
+     *
+     * @param DocumentSet $documentSetProto
+     * @return SimpleStorage
+     */
+    public function setDocumentSetProto(DocumentSet $documentSetProto)
+    {
+        $documentSetProto->getFactory()->getEntityProto()->setKeyName($this->docIdField);
+
+        $this->documentSetProto = $documentSetProto;
+
+        return $this;
     }
 
     /**

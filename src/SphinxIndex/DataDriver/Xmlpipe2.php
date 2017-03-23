@@ -52,13 +52,19 @@ class Xmlpipe2 implements DataDriverInterface
 
     /**
      *
-     * @param string $indexConfig
+     * @param string|array $indexConfig
      * @return Xmlpipe2
      * @throws \Exception
      */
     protected function parse($indexConfig)
     {
-        $data = Config\Factory::fromFile($indexConfig);
+        if (is_string($indexConfig)) {
+            $data = Config\Factory::fromFile($indexConfig);
+        } else if (is_array($indexConfig)) {
+            $data = $indexConfig;
+        } else {
+            throw new \Exception('Invalid type of indexConfig');
+        }
 
         foreach ($data as $key => $value) {
             switch ($key) {
@@ -101,13 +107,13 @@ class Xmlpipe2 implements DataDriverInterface
      */
     public function addDocuments(DocumentSet $documents)
     {
+        $this->initHead();
         foreach ($documents as $document) {
-            if (!isset($document->id)) {
-                //throw new \Exception('document id must be set');
+            if (!$document->getKeyValue()) {
                 continue;
             }
 
-            echo $this->getDocumentXML($document->id, $document);
+            echo $this->getDocumentXML($document->getKeyValue(), $document);
         }
     }
 
@@ -117,26 +123,18 @@ class Xmlpipe2 implements DataDriverInterface
     public function init()
     {
         $this->sections = array_merge(array_flip($this->fields), $this->attributes);
-
-        echo $this->getHead();
     }
 
     /**
-     * Prints the close part of xml data
-     */
-    public function finish()
-    {
-        echo $this->getFoot();
-    }
-
-    /**
-     * Returns the xml of sphinx:schema
+     * Output head if needed
      *
-     * @return string
+     * @return Xmlpipe2
      */
-    public function getSchema()
+    protected function initHead()
     {
-        $buffer = array('<sphinx:schema>');
+        $buffer = array('<?xml version="1.0" encoding="utf-8"?>');
+        $buffer[] = '<sphinx:docset>';
+        $buffer[] = '<sphinx:schema>';
 
         foreach ($this->fields as $name) {
             $buffer[] = '<sphinx:field ' . $this->paramsToString($name) . '/>';
@@ -148,7 +146,17 @@ class Xmlpipe2 implements DataDriverInterface
 
         $buffer[] = '</sphinx:schema>';
 
-        return implode("\n", $buffer);
+        echo implode("\n", $buffer);
+
+        return $this;
+    }
+
+    /**
+     * Prints the close part of xml data
+     */
+    public function finish()
+    {
+        echo $this->getFoot();
     }
 
     /**
@@ -183,13 +191,14 @@ class Xmlpipe2 implements DataDriverInterface
      */
     public function removeDocuments(DocumentSet $documents)
     {
+        $this->initHead();
         $ids = array();
         foreach ($documents as $document) {
-            if (!isset($document->id)) {
-                throw new \Exception('document must contain ID field');
+            if (!$document->getKeyValue()) {
+                continue;
             }
 
-            $ids[] = $document->id;
+            $ids[] = $document->getKeyValue();
         }
 
         echo $this->getKilllist($ids);
@@ -254,19 +263,6 @@ class Xmlpipe2 implements DataDriverInterface
         }
 
         return implode(' ', $result);
-    }
-
-    /**
-     *
-     * @return string
-     */
-    public function getHead()
-    {
-         $buffer = array('<?xml version="1.0" encoding="utf-8"?>');
-         $buffer[] = '<sphinx:docset>';
-         $buffer[] = $this->getSchema();
-
-         return implode("\n", $buffer);
     }
 
     /**

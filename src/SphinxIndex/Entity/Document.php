@@ -12,6 +12,12 @@ class Document
 
     /**
      *
+     * @var string
+     */
+    protected $keyName = 'id';
+
+    /**
+     *
      * @param array $data
      */
     public function __construct(array $data = array())
@@ -19,6 +25,36 @@ class Document
         if (!empty($data)) {
             $this->exchangeArray($data);
         }
+    }
+
+    /**
+     *
+     * @return string
+     */
+    public function getKeyName()
+    {
+        return $this->keyName;
+    }
+
+    /**
+     *
+     * @param type $keyName
+     * @return Document
+     */
+    public function setKeyName($keyName)
+    {
+        $this->keyName = $keyName;
+
+        return $this;
+    }
+
+    /**
+     *
+     * @return mixed
+     */
+    public function getKeyValue()
+    {
+        return $this->{$this->getKeyName()};
     }
 
     /**
@@ -49,7 +85,7 @@ class Document
      *
      * @param string $name
      * @param string|integer|float $value
-     * @return Simple
+     * @return Document
      */
     public function __set($name, $value)
     {

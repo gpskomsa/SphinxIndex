@@ -10,7 +10,7 @@ use SphinxIndex\Storage\StorageInterface;
 use SphinxIndex\Storage\ControlPointUsingInterface;
 use SphinxIndex\Entity\DocumentSet;
 
-class SimpleDataProvider implements DataProviderInterface
+class DataProvider implements DataProviderInterface
 {
     /**
      * Storage object
@@ -49,7 +49,7 @@ class SimpleDataProvider implements DataProviderInterface
     /**
      *
      * @param array $options
-     * @return SimpleDataProvider
+     * @return DataProvider
      */
     public function setOptions(array $options)
     {
@@ -66,12 +66,16 @@ class SimpleDataProvider implements DataProviderInterface
     /**
      *
      * @param array|ListenerAggregateInterface $listeners
-     * @return SimpleDataProvider
+     * @return DataProvider
      */
     public function attachListeners($listeners)
     {
+        if (is_string($listeners)) {
+            $listeners = array($listeners => array());
+        }
+
         if (!is_array($listeners)) {
-            $listeners = array($listeners);
+            $listeners = (array) $listeners;
         }
 
         foreach ($listeners as $key => $listener) {
@@ -126,7 +130,7 @@ class SimpleDataProvider implements DataProviderInterface
     /**
      *
      * @param  PluginManager $plugins
-     * @return SimpleDataProvider
+     * @return DataProvider
      */
     public function setPluginManager(PluginManager $plugins)
     {
@@ -168,7 +172,7 @@ class SimpleDataProvider implements DataProviderInterface
     /**
      *
      * @param  EventManagerInterface $events
-     * @return SimpleDataProvider
+     * @return DataProvider
      */
     public function setEventManager(EventManagerInterface $events)
     {

@@ -6,7 +6,7 @@ use Zend\EventManager\EventManagerInterface;
 use Zend\EventManager\ListenerAggregateInterface;
 use Zend\EventManager\EventInterface;
 
-use SphinxIndex\DataProvider\SimpleDataProvider;
+use SphinxIndex\DataProvider\DataProvider;
 
 class Rename extends AbstractPlugin implements ListenerAggregateInterface
 {
@@ -44,8 +44,8 @@ class Rename extends AbstractPlugin implements ListenerAggregateInterface
     {
         $this->listeners[] = $events->attach(
             array(
-                SimpleDataProvider::EVENT_DOCUMENTS_TO_INSERT,
-                SimpleDataProvider::EVENT_DOCUMENTS_TO_UPDATE
+                DataProvider::EVENT_DOCUMENTS_TO_INSERT,
+                DataProvider::EVENT_DOCUMENTS_TO_UPDATE
             ),
             array($this, 'rename')
         );

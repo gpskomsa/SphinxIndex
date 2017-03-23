@@ -4,6 +4,7 @@ namespace SphinxIndex\DataProvider;
 
 use Zend\ServiceManager\AbstractPluginManager;
 use Zend\ServiceManager\ConfigInterface;
+use Interop\Container\ContainerInterface;
 
 class PluginManager extends AbstractPluginManager
 {
@@ -26,11 +27,11 @@ class PluginManager extends AbstractPluginManager
 
     /**
      *
-     * @param ConfigInterface $configuration
+     * @param null|ConfigInterface|ContainerInterface $configOrContainerInstance
      */
-    public function __construct(ConfigInterface $configuration = null)
+    public function __construct($configOrContainerInstance = null)
     {
-        parent::__construct($configuration);
+        parent::__construct($configOrContainerInstance);
         $this->addInitializer(array($this, 'injectDataProvider'));
     }
 

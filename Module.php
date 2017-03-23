@@ -77,14 +77,10 @@ class Module implements ConsoleUsageProviderInterface
                     $config = $sm->get('Config');
                     return new Options\ModuleOptions(isset($config['sphinx_index']) ? $config['sphinx_index'] : array());
                 },
-                'SphinxIndex\IndexFactory' => function($sm) {
-                    return new Index\IndexFactory($sm->get('SphinxIndexModuleOptions'));
-                },
                 'SphinxIndex\DataProvider\PluginManager' => 'SphinxIndex\DataProvider\Service\PluginManagerFactory',
             ),
             'abstract_factories' => array(
                 'SphinxIndex\Redis\Adapter\AbstractFactory',
-                'SphinxIndex\Index\IndexFactory',
             ),
             'invokables' => array(
                 'SphinxIndex\Redis' => '\Redis',

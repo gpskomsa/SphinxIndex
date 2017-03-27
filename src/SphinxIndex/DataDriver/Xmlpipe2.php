@@ -41,6 +41,12 @@ class Xmlpipe2 implements DataDriverInterface
     protected $badUtf8Filter = null;
 
     /**
+     *
+     * @var boolean
+     */
+    protected $isHeadInitilized = false;
+
+    /**
      * @param string $indexConfig
      * @param array $options
      */
@@ -132,6 +138,10 @@ class Xmlpipe2 implements DataDriverInterface
      */
     protected function initHead()
     {
+        if ($this->isHeadInitilized) {
+            return $this;
+        }
+
         $buffer = array('<?xml version="1.0" encoding="utf-8"?>');
         $buffer[] = '<sphinx:docset>';
         $buffer[] = '<sphinx:schema>';
@@ -147,6 +157,8 @@ class Xmlpipe2 implements DataDriverInterface
         $buffer[] = '</sphinx:schema>';
 
         echo implode("\n", $buffer);
+
+        $this->isHeadInitilized = true;
 
         return $this;
     }

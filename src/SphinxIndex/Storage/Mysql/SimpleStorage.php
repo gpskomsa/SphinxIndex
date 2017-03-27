@@ -87,6 +87,12 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
 
     /**
      *
+     * @var integer
+     */
+    protected $poolSize = 5000;
+
+    /**
+     *
      * @param Adapter $adapter
      * @param DocumentSet $documentSetProto
      * @param array $options
@@ -168,6 +174,18 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
         $documentSetProto->getFactory()->getEntityProto()->setKeyName($this->docIdField);
 
         $this->documentSetProto = $documentSetProto;
+
+        return $this;
+    }
+
+    /**
+     *
+     * @param integer $poolSize
+     * @return SimpleStorage
+     */
+    public function setPoolSize($poolSize)
+    {
+        $this->poolSize = $poolSize;
 
         return $this;
     }
@@ -300,15 +318,19 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
         $this->applyConditionsForRange($select, $chunkId);
         $this->applyConditionsForValidDocs($select);
         $this->applyDataJoins($select);
+        $this->applyLimits($select);
 
         $rows = $this->adapter->query(
             $sql->getSqlStringForSqlObject($select),
             Adapter::QUERY_MODE_EXECUTE
         );
 
-        $this->state(__FUNCTION__, true);
+        if (!count($rows)) {
+            $this->state(__FUNCTION__, true);
+        }
 
         $documents = clone $this->getDocumentSetProto();
+
         return $documents->set($rows);
     }
 
@@ -339,6 +361,26 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
         }
 
         $select->where->addPredicate($custom, PredicateSet::OP_AND);
+
+        return $this;
+    }
+
+    /**
+     *
+     * @param Select $select
+     * @return SimpleStorage
+     */
+    public function applyLimits(Select $select)
+    {
+        $offset = $this->state(__FUNCTION__);
+        if (false === $offset) {
+            $offset = 0;
+        }
+
+        $select->limit($this->poolSize);
+        $select->offset($offset);
+
+        $this->state(__FUNCTION__, $offset + $this->poolSize);
 
         return $this;
     }
@@ -402,13 +444,16 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
         $this->applyConditionsForLastDate($select, $lastDate);
 
         $this->applyConditionsForValidDocs($select);
+        $this->applyLimits($select);
 
         $rows = $this->adapter->query(
             $sql->getSqlStringForSqlObject($select),
             Adapter::QUERY_MODE_EXECUTE
         );
 
-        $this->state(__FUNCTION__, true);
+        if (!count($rows)) {
+            $this->state(__FUNCTION__, true);
+        }
 
         $documents = clone $this->getDocumentSetProto();
         return $documents->set($rows);
@@ -473,13 +518,16 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
         $this->applyConditionsForRange($select, $chunkId);
         $this->applyConditionsForLastDate($select, $lastDate);
         $this->applyConditionsForInvalidDocs($select);
+        $this->applyLimits($select);
 
         $rows = $this->adapter->query(
             $sql->getSqlStringForSqlObject($select),
             Adapter::QUERY_MODE_EXECUTE
         );
 
-        $this->state(__FUNCTION__, true);
+        if (!count($rows)) {
+            $this->state(__FUNCTION__, true);
+        }
 
         $documents = clone $this->getDocumentSetProto();
         return $documents->set($rows);

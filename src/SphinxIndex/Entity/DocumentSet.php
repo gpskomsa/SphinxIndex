@@ -12,9 +12,9 @@ class DocumentSet implements \Iterator
     /**
      * Source data
      *
-     * @var array
+     * @var \Iterator
      */
-    protected $data = array();
+    protected $data = null;
 
     /**
      *
@@ -53,6 +53,8 @@ class DocumentSet implements \Iterator
 
         if (null !== $data) {
             $this->set($data);
+        } else {
+            $this->data = new \ArrayIterator(array());
         }
     }
 

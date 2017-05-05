@@ -77,13 +77,11 @@ class Rename extends AbstractPlugin implements ListenerAggregateInterface
             return $e;
         }
 
-        $documents = $e->getParam('documents');
-        foreach ($documents as $document) {
-            foreach ($this->fieldsNames as $target => $source) {
-                if (!isset($document->{$target})) {
-                    $document->{$target} = $document->{$source};
-                    unset($document->{$source});
-                }
+        $document = $e->getParam('document');
+        foreach ($this->fieldsNames as $target => $source) {
+            if (!isset($document->{$target})) {
+                $document->{$target} = $document->{$source};
+                unset($document->{$source});
             }
         }
 

@@ -20,10 +20,13 @@ class Filters extends AbstractPlugin implements ListenerAggregateInterface
     /**
      * Filters data.
      * array(
-     *   'field/attribute of document' => array(
-     *     'class or object of filter',
-     *     'class or object of filter',
-     *     ...
+     *   'field/attribute of result document' => array(
+     *     'field' => 'name of source field',
+     *     'filters' => array(
+     *       'class or object of filter',
+     *       'class or object of filter',
+     *       ...
+     *     ),
      *   ),
      *   ...
      * )
@@ -114,20 +117,18 @@ class Filters extends AbstractPlugin implements ListenerAggregateInterface
      */
     public function filter(EventInterface $e)
     {
-        $documents = $e->getParam('documents');
-        foreach ($documents as $document) {
-            foreach ($this->fieldFilters as $field => $data) {
-                if (!isset($document->{$data['field']})) {
-                    $document->{$data['field']} = null;
-                }
-
-                $value = $document->{$data['field']};
-                foreach ($data['filters'] as $filter) {
-                    $value = $filter->filter($value);
-                }
-
-                $document->{$field} = $value;
+        $document = $e->getParam('document');
+        foreach ($this->fieldFilters as $field => $data) {
+            if (!isset($document->{$data['field']})) {
+                $document->{$data['field']} = null;
             }
+
+            $value = $document->{$data['field']};
+            foreach ($data['filters'] as $filter) {
+                $value = $filter->filter($value);
+            }
+
+            $document->{$field} = $value;
         }
 
         return $e;

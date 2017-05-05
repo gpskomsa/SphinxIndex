@@ -2,10 +2,15 @@
 
 namespace SphinxIndex\Entity;
 
-class DocumentSet implements \Iterator, \Countable, \ArrayAccess
+use Zend\EventManager\EventManager;
+use Zend\EventManager\EventManagerInterface;
+
+class DocumentSet implements \Iterator
 {
+    const EVENT_DOCUMENT_CREATE = 'create';
+
     /**
-     * Document set
+     * Source data
      *
      * @var array
      */
@@ -16,6 +21,24 @@ class DocumentSet implements \Iterator, \Countable, \ArrayAccess
      * @var Service\DocumentFactory
      */
     protected $factory = null;
+
+    /**
+     *
+     * @var EventManagerInterface
+     */
+    protected $events;
+
+    /**
+     *
+     * @var Document
+     */
+    protected $current = null;
+
+    /**
+     *
+     * @var integer
+     */
+    protected $countProcessed = 0;
 
     /**
      *
@@ -31,6 +54,36 @@ class DocumentSet implements \Iterator, \Countable, \ArrayAccess
         if (null !== $data) {
             $this->set($data);
         }
+    }
+
+    /**
+     *
+     * @param  EventManagerInterface $events
+     * @return DocumentSet
+     */
+    public function setEventManager(EventManagerInterface $events)
+    {
+        $events->setIdentifiers(array(
+            __CLASS__,
+            get_called_class()
+        ));
+
+        $this->events = $events;
+
+        return $this;
+    }
+
+    /**
+     *
+     * @return EventManagerInterface
+     */
+    public function getEventManager()
+    {
+        if (!$this->events) {
+            $this->setEventManager(new EventManager());
+        }
+
+        return $this->events;
     }
 
     /**
@@ -59,7 +112,7 @@ class DocumentSet implements \Iterator, \Countable, \ArrayAccess
     }
 
     /**
-     * Sets data for set
+     * Sets data for documents
      *
      * @param \Traversable|array $set
      * @return DocumentSet
@@ -67,80 +120,65 @@ class DocumentSet implements \Iterator, \Countable, \ArrayAccess
      */
     public function set($set)
     {
-        if (!is_array($set)
-            && !$set instanceof \Traversable) {
+        if (is_array($set)) {
+            $this->data = new \ArrayIterator($set);
+        } else if ($set instanceof \IteratorAggregate) {
+            $this->data = $set->getIterator();
+        } else if ($set instanceof \Iterator) {
+            $this->data = $set;
+        } else {
             throw new \Exception('data must be accessible for foreach');
         }
 
-        foreach ($set as $data) {
-            $this->add($data);
-        }
-
         return $this;
     }
 
     /**
-     * Adds data to set, create Document if nessesary
      *
      * @param mixed $data
-     * @return DocumentSet
+     * @return Document
      */
-    public function add($data)
+    public function createDocument($data)
     {
-        if ($data instanceof Document) {
-            $item = $data;
-        } else {
-            $item = $this->getFactory()->create($data);
-        }
+        $document = $this->getFactory()->create($data);
+        $this->getEventManager()->trigger(
+            self::EVENT_DOCUMENT_CREATE,
+            $this,
+            array('document' => $document)
+        );
 
-        if ($item) {
-            $this->data[] = $item;
-        }
-
-        return $this;
+        return $document;
     }
 
     /**
-     * Return data of set as array
-     */
-    public function toArray()
-    {
-        $data = array();
-        foreach ($this->data as $item) {
-            $data[] = $item->getValues();
-        }
-
-        return $data;
-    }
-
-    /**
-     * Resets data of set
-     *
-     * @return SimpleSet
-     */
-    public function reset()
-    {
-        $this->data = array();
-
-        return $this;
-    }
-
-    /**
+     * Get count of processed(created) documents
      *
      * @return integer
      */
-    public function count()
+    public function getCountProcessed()
     {
-        return count($this->data);
+        return $this->countProcessed;
     }
 
     /**
      *
-     * @return mixed
+     * @return Document|false
      */
     public function current()
     {
-        return current($this->data);
+        if (null !== $this->current) {
+            return $this->current;
+        }
+
+        $data = $this->data->current();
+        if (!$data) {
+            return false;
+        }
+
+        $this->countProcessed++;
+        $this->current = $this->createDocument($data);
+
+        return $this->current;
     }
 
     /**
@@ -149,7 +187,7 @@ class DocumentSet implements \Iterator, \Countable, \ArrayAccess
      */
     public function key()
     {
-        return key($this->data);
+        return $this->data->key();
     }
 
     /**
@@ -158,7 +196,9 @@ class DocumentSet implements \Iterator, \Countable, \ArrayAccess
      */
     public function next()
     {
-        return next($this->data);
+        $this->current = null;
+
+        return $this->data->next();
     }
 
     /**
@@ -167,7 +207,10 @@ class DocumentSet implements \Iterator, \Countable, \ArrayAccess
      */
     public function rewind()
     {
-        return reset($this->data);
+        $this->countProcessed = 0;
+        $this->current = null;
+
+        return $this->data->rewind();
     }
 
     /**
@@ -177,48 +220,5 @@ class DocumentSet implements \Iterator, \Countable, \ArrayAccess
     public function valid()
     {
         return (bool) $this->current();
-    }
-
-    /**
-     *
-     * @param integer $offset
-     * @param mixed $value
-     */
-    public function offsetSet($offset, $value)
-    {
-        if (is_null($offset)) {
-            $this->data[] = $value;
-        } else {
-            $this->data[$offset] = $value;
-        }
-    }
-
-    /**
-     *
-     * @param integer $offset
-     * @return boolean
-     */
-    public function offsetExists($offset)
-    {
-        return isset($this->data[$offset]);
-    }
-
-    /**
-     *
-     * @param integer $offset
-     */
-    public function offsetUnset($offset)
-    {
-        unset($this->data[$offset]);
-    }
-
-    /**
-     *
-     * @param integer $offset
-     * @return mixed
-     */
-    public function offsetGet($offset)
-    {
-        return isset($this->data[$offset]) ? $this->data[$offset] : null;
     }
 }

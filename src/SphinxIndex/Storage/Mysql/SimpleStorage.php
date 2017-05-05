@@ -89,7 +89,7 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
      *
      * @var integer
      */
-    protected $poolSize = 5000;
+    protected $poolSize = 0;
 
     /**
      *
@@ -307,7 +307,9 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
     {
         if ($this->state(__FUNCTION__)) {
             $this->state(__FUNCTION__, false);
-            return false;
+            $documents = clone $this->getDocumentSetProto();
+
+            return $documents;
         }
 
         $sql = new Sql($this->adapter);
@@ -325,13 +327,14 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
             Adapter::QUERY_MODE_EXECUTE
         );
 
-        if (!count($rows)) {
+        $documents = clone $this->getDocumentSetProto();
+        $documents->set($rows);
+
+        if (!$this->poolSize) {
             $this->state(__FUNCTION__, true);
         }
 
-        $documents = clone $this->getDocumentSetProto();
-
-        return $documents->set($rows);
+        return $documents;
     }
 
     /**
@@ -377,10 +380,12 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
             $offset = 0;
         }
 
-        $select->limit($this->poolSize);
-        $select->offset($offset);
+        if ($this->poolSize) {
+            $select->limit($this->poolSize);
+            $select->offset($offset);
 
-        $this->state(__FUNCTION__, $offset + $this->poolSize);
+            $this->state(__FUNCTION__, $offset + $this->poolSize);
+        }
 
         return $this;
     }
@@ -389,7 +394,7 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
      *
      * @param Select $select
      */
-    protected function setFrom($select)
+    protected function setFrom(Select $select)
     {
         $select->from(array('main' => $this->getProperty('tableName')));
     }
@@ -427,7 +432,9 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
     {
         if ($this->state(__FUNCTION__)) {
             $this->state(__FUNCTION__, false);
-            return false;
+            $documents = clone $this->getDocumentSetProto();
+
+            return $documents;
         }
 
         if (null === $this->cpManager
@@ -451,7 +458,7 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
             Adapter::QUERY_MODE_EXECUTE
         );
 
-        if (!count($rows)) {
+        if (!$this->poolSize) {
             $this->state(__FUNCTION__, true);
         }
 
@@ -498,7 +505,9 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
     {
         if ($this->state(__FUNCTION__)) {
             $this->state(__FUNCTION__, false);
-            return false;
+            $documents = clone $this->getDocumentSetProto();
+
+            return $documents;
         }
 
         if (null === $this->cpManager
@@ -525,7 +534,7 @@ class SimpleStorage implements StorageInterface, ControlPointUsingInterface, Ran
             Adapter::QUERY_MODE_EXECUTE
         );
 
-        if (!count($rows)) {
+        if (!$this->poolSize) {
             $this->state(__FUNCTION__, true);
         }
 

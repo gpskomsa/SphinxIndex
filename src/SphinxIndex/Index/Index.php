@@ -120,17 +120,20 @@ class Index
         $this->dataDriver->init();
 
         if ($this->isDelta()) {
-            while ($documents = $this->dataProvider->getDocumentsToUpdate($chunkId)) {
+            do {
+                $documents = $this->dataProvider->getDocumentsToUpdate($chunkId);
                 $this->dataDriver->addDocuments($documents);
-            }
+            } while($documents->getCountProcessed());
 
-            while ($documentsToDelete = $this->dataProvider->getDocumentsToDelete($chunkId)) {
-                $this->dataDriver->removeDocuments($documentsToDelete);
-            }
+            do {
+                $documents = $this->dataProvider->getDocumentsToDelete($chunkId);
+                $this->dataDriver->removeDocuments($documents);
+            } while($documents->getCountProcessed());
         } else {
-            while ($documents = $this->dataProvider->getDocumentsToInsert($chunkId)) {
+            do {
+                $documents = $this->dataProvider->getDocumentsToInsert($chunkId);
                 $this->dataDriver->addDocuments($documents);
-            }
+            } while($documents->getCountProcessed());
         }
 
         $this->dataDriver->finish();

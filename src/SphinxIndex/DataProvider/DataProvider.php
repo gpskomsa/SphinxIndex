@@ -5,6 +5,7 @@ namespace SphinxIndex\DataProvider;
 use Zend\EventManager\EventManager;
 use Zend\EventManager\EventManagerInterface;
 use Zend\EventManager\ListenerAggregateInterface;
+use Zend\EventManager\EventInterface;
 
 use SphinxIndex\Storage\StorageInterface;
 use SphinxIndex\Storage\ControlPointUsingInterface;
@@ -236,11 +237,11 @@ class DataProvider implements DataProviderInterface
         }
 
         if ($documents) {
-            $this->getEventManager()->trigger(
-                $update ? self::EVENT_DOCUMENTS_TO_UPDATE : self::EVENT_DOCUMENTS_TO_INSERT,
-                $this,
+            $documents->getEventManager()->attach(
+                DocumentSet::EVENT_DOCUMENT_CREATE,
                 array(
-                    'documents' => $documents,
+                    $this,
+                    $update ? 'toUpdateDocument' : 'toInsertDocument'
                 )
             );
         } else {
@@ -262,16 +263,73 @@ class DataProvider implements DataProviderInterface
     {
         $documents = $this->storage->getItemsToDelete($chunkId);
         if ($documents) {
-            $this->getEventManager()->trigger(
-                self::EVENT_DOCUMENTS_TO_DELETE,
-                $this,
+            $documents->getEventManager()->attach(
+                DocumentSet::EVENT_DOCUMENT_CREATE,
                 array(
-                    'documents' => $documents,
+                    $this,
+                    'toDeleteDocument'
                 )
             );
         }
 
         return $documents;
+    }
+
+    /**
+     *
+     * @param EventInterface $e
+     * @return EventInterface
+     */
+    public function toInsertDocument(EventInterface $e)
+    {
+        $document = $e->getParam('document');
+        $this->getEventManager()->trigger(
+            self::EVENT_DOCUMENTS_TO_INSERT,
+            $this,
+            array(
+                'document' => $document,
+            )
+        );
+
+        return $e;
+    }
+
+    /**
+     *
+     * @param EventInterface $e
+     * @return EventInterface
+     */
+    public function toUpdateDocument(EventInterface $e)
+    {
+        $document = $e->getParam('document');
+        $this->getEventManager()->trigger(
+            self::EVENT_DOCUMENTS_TO_UPDATE,
+            $this,
+            array(
+                'document' => $document,
+            )
+        );
+
+        return $e;
+    }
+
+    /**
+     *
+     * @param EventInterface $e
+     * @return EventInterface
+     */
+    public function toDeleteDocument(EventInterface $e)
+    {
+        $document = $e->getParam('document');
+        $this->getEventManager()->trigger(
+            self::EVENT_DOCUMENTS_TO_DELETE,
+            $this,
+            array(
+                'document' => $document,
+            )
+        );
+
+        return $e;
     }
 
     /**

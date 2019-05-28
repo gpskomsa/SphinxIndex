@@ -106,6 +106,15 @@ class Index
     }
 
     /**
+     *
+     * @return DataDriverInterface
+     */
+    public function getDataDriver()
+    {
+        return $this->dataDriver;
+    }
+
+    /**
      * Builds index data
      *
      * @param integer|null $chunkId

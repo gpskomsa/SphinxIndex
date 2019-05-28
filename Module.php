@@ -1,12 +1,10 @@
 <?php
 namespace SphinxIndex;
 
-use Zend\ModuleManager\Feature\ConsoleUsageProviderInterface;
-use Zend\Console\Adapter\AdapterInterface as Console;
 use Zend\Mvc\MvcEvent;
 use Zend\ModuleManager\ModuleManager;
 
-class Module implements ConsoleUsageProviderInterface
+class Module
 {
     public function init(ModuleManager $moduleManager)
     {
@@ -54,12 +52,7 @@ class Module implements ConsoleUsageProviderInterface
 
     public function getControllerConfig()
     {
-        return array(
-            'invokables' => array(
-                'SphinxIndex\Index' => 'SphinxIndex\Controller\IndexController',
-                'SphinxIndex\Split' => 'SphinxIndex\Controller\SplitController',
-            ),
-        );
+        return [];
     }
 
     public function getServiceConfig()
@@ -89,19 +82,6 @@ class Module implements ConsoleUsageProviderInterface
             'shared' => array(
                 'SphinxIndex\Redis' => false,
             ),
-        );
-    }
-
-    public function getConsoleUsage(Console $console)
-    {
-        return array(
-            'To set/update documents into sphinx\'s index:',
-            'index build <index_name>' => 'build index <index_name>, really only affects on RT-index',
-            'index update <index_name>' => 'update index <index_name>, really only affects on RT-index',
-            array('<index_name>', 'real index name, not distributed'),
-            'To split one distributed index document\'s id range into equal chunks:',
-            'index split <index_name>' => 'split index `index_name`',
-            array('<index_name>', 'distributed index name'),
         );
     }
 }

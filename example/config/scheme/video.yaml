@@ -1,0 +1,11 @@
+fields:
+  - title
+  - description
+
+attributes:
+  title:
+    type: string
+  duration:
+    type: int
+  created:
+    type: timestamp

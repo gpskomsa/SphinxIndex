@@ -2,7 +2,7 @@
 
 namespace SphinxIndex\Index;
 
-class IndexManagerProviderInterface
+interface IndexManagerProviderInterface
 {
     /**
      * @return array|\Zend\ServiceManager\Config

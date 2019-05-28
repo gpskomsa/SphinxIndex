@@ -47,6 +47,18 @@ class Xmlpipe2 implements DataDriverInterface
     protected $isHeadInitilized = false;
 
     /**
+     *
+     * @var boolean
+     */
+    protected $useBuffer = false;
+
+    /**
+     *
+     * @var string
+     */
+    protected $buffer = '';
+
+    /**
      * @param string $indexConfig
      * @param array $options
      */
@@ -119,7 +131,7 @@ class Xmlpipe2 implements DataDriverInterface
                 continue;
             }
 
-            echo $this->getDocumentXML($document->getKeyValue(), $document);
+            $this->output($this->getDocumentXML($document->getKeyValue(), $document));
         }
     }
 
@@ -128,6 +140,7 @@ class Xmlpipe2 implements DataDriverInterface
      */
     public function init()
     {
+        $this->buffer = '';
         $this->sections = array_merge(array_flip($this->fields), $this->attributes);
     }
 
@@ -156,7 +169,7 @@ class Xmlpipe2 implements DataDriverInterface
 
         $buffer[] = '</sphinx:schema>';
 
-        echo implode("\n", $buffer);
+        $this->output(implode("\n", $buffer));
 
         $this->isHeadInitilized = true;
 
@@ -168,7 +181,7 @@ class Xmlpipe2 implements DataDriverInterface
      */
     public function finish()
     {
-        echo $this->getFoot();
+        $this->output($this->getFoot());
     }
 
     /**
@@ -213,7 +226,7 @@ class Xmlpipe2 implements DataDriverInterface
             $ids[] = $document->getKeyValue();
         }
 
-        echo $this->getKilllist($ids);
+        $this->output($this->getKilllist($ids));
     }
 
     /**
@@ -263,6 +276,36 @@ class Xmlpipe2 implements DataDriverInterface
 
     /**
      *
+     * @param boolean $flag
+     * @return $this
+     */
+    public function setUseBuffer($flag)
+    {
+        $this->useBuffer = (boolean) $flag;
+
+        return $this;
+    }
+
+    /**
+     *
+     * @return boolean
+     */
+    public function getUseBuffer()
+    {
+        return $this->flag;
+    }
+
+    /**
+     *
+     * @return string
+     */
+    public function getBuffer()
+    {
+        return $this->buffer;
+    }
+
+    /**
+     *
      * @param array $params
      * @return string
      */
@@ -275,6 +318,15 @@ class Xmlpipe2 implements DataDriverInterface
         }
 
         return implode(' ', $result);
+    }
+
+    protected function output($data)
+    {
+        if (!$this->useBuffer) {
+            echo $data;
+        } else {
+            $this->buffer .= $data;
+        }
     }
 
     /**

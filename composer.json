@@ -14,7 +14,7 @@
         "zendframework/zend-servicemanager": "^3.4",
         "zendframework/zend-filter": "^2.9",
         "symfony/yaml": "2.*",
-        "gpskomsa/sphinx-config": "dev-master#0f3bd72871d48f108e75dd5b0b91ced7160e7fa1"
+        "gpskomsa/sphinx-config": "dev-master#HEAD"
     },
     "require-dev": {
         "phpunit/phpunit": "^7.0.1",

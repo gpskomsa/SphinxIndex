@@ -2,9 +2,11 @@
 
 namespace SphinxIndex\DataProvider;
 
+use Interop\Container\ContainerInterface;
 use Zend\ServiceManager\AbstractPluginManager;
 use Zend\ServiceManager\ConfigInterface;
-use Interop\Container\ContainerInterface;
+use Zend\ServiceManager\Factory\InvokableFactory;
+use Zend\ServiceManager\Exception\InvalidServiceException;
 
 class PluginManager extends AbstractPluginManager
 {
@@ -20,10 +22,19 @@ class PluginManager extends AbstractPluginManager
      *
      * @var array
      */
-    protected $invokableClasses = array(
-        'filters'  => 'SphinxIndex\DataProvider\Plugin\Filters',
-        'rename'   => 'SphinxIndex\DataProvider\Plugin\Rename',
-    );
+    protected $factories = [
+        Plugin\Filters::class => InvokableFactory::class,
+        Plugin\Rename::class => InvokableFactory::class,
+    ];
+
+    /**
+     *
+     * @var array
+     */
+    protected $aliases = [
+        'Filters' => Plugin\Filters::class,
+        'Rename' => Plugin\Rename::class
+    ];
 
     /**
      *
@@ -77,21 +88,20 @@ class PluginManager extends AbstractPluginManager
     /**
      * Detects if plugin is valid
      *
-     * @param mixed $plugin
+     * @param mixed $instance
      * @return void
      */
-    public function validatePlugin($plugin)
+    public function validate($instance)
     {
-        if ($plugin instanceof Plugin\PluginInterface) {
-            return;
+        if (! is_callable($instance) && ! $instance instanceof Plugin\PluginInterface) {
+            throw new InvalidServiceException(
+                sprintf(
+                    '%s can only create instances of %s and/or callables; %s is invalid',
+                    get_class($this),
+                    Plugin\PluginInterface::class,
+                    (is_object($instance) ? get_class($instance) : gettype($instance))
+                )
+            );
         }
-
-        throw new \Exception(
-            sprintf(
-                'Plugin of type %s is invalid; must implement %s\Plugin\PluginInterface',
-                (is_object($plugin) ? get_class($plugin) : gettype($plugin)),
-                __NAMESPACE__
-            )
-        );
     }
 }

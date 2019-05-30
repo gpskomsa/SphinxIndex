@@ -10,7 +10,7 @@ use SphinxIndex\Entity\DocumentSet;
 class RT implements DataDriverInterface
 {
     /**
-     * Название индекса с которым работает драйвер
+     * The name of index
      *
      * @var string
      */

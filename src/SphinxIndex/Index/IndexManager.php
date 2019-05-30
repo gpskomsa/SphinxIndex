@@ -3,27 +3,21 @@
 namespace SphinxIndex\Index;
 
 use Zend\ServiceManager\AbstractPluginManager;
+use Zend\ServiceManager\Exception\InvalidServiceException;
 
 class IndexManager extends AbstractPluginManager
 {
-    /**
-     * Detects if plugin is valid
-     *
-     * @param mixed $plugin
-     * @return void
-     */
-    public function validatePlugin($plugin)
+    public function validate($instance)
     {
-        if ($plugin instanceof Index) {
-            return;
+        if (! is_callable($instance) && ! $instance instanceof Index) {
+            throw new InvalidServiceException(
+                sprintf(
+                    '%s can only create instances of %s and/or callables; %s is invalid',
+                    get_class($this),
+                    Index::class,
+                    (is_object($instance) ? get_class($instance) : gettype($instance))
+                )
+            );
         }
-
-        throw new \Exception(
-            sprintf(
-                'Index of type %s is invalid; must be instance of or extend %s\Index',
-                (is_object($plugin) ? get_class($plugin) : gettype($plugin)),
-                __NAMESPACE__
-            )
-        );
     }
 }

@@ -1,10 +1,10 @@
 <?php
 
-namespace SphinxIndex\DataProvider\Service;
+namespace SphinxIndex\DataProvider;
 
 use Zend\Mvc\Service\AbstractPluginManagerFactory;
 
 class PluginManagerFactory extends AbstractPluginManagerFactory
 {
-    const PLUGIN_MANAGER_CLASS = 'SphinxIndex\DataProvider\PluginManager';
+    const PLUGIN_MANAGER_CLASS = PluginManager::class;
 }

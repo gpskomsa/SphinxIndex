@@ -1,6 +1,6 @@
 <?php
 
-namespace SphinxIndex\DataProvider\Service;
+namespace SphinxIndex\DataProvider;
 
 interface PluginManagerProviderInterface
 {

@@ -10,16 +10,16 @@ class Module
     {
         $sm = $moduleManager->getEvent()->getParam('ServiceManager');
         $sm->get('ServiceListener')->addServiceManager(
-            'SphinxIndex\DataProvider\PluginManager',
+            DataProvider\PluginManager::class,
             'sphinxindex_data_provider_plugin_manager_config',
-            'SphinxIndex\DataProvider\Service\PluginManagerProviderInterface',
+            DataProvider\PluginManagerProviderInterface::class,
             'getSphinxIndexDataProviderPluginConfig'
         );
 
         $sm->get('ServiceListener')->addServiceManager(
-            'SphinxIndex\Index\IndexManager',
+            Index\IndexManager::class,
             'sphinxindex_index_manager_config',
-            'SphinxIndex\Index\IndexManagerProviderInterface',
+            Index\IndexManagerProviderInterface::class,
             'getSphinxIndexManagerConfig'
         );
     }
@@ -30,17 +30,6 @@ class Module
     public function getConfig()
     {
         return include __DIR__ . '/config/module.config.php';
-    }
-
-    public function getAutoloaderConfig()
-    {
-        return array(
-            'Zend\Loader\StandardAutoloader' => array(
-                'namespaces' => array(
-                    __NAMESPACE__ => __DIR__ . '/src/' . __NAMESPACE__,
-                ),
-            ),
-        );
     }
 
     public function getModuleDependencies()
@@ -59,25 +48,25 @@ class Module
     {
         return array(
             'factories' => array(
-                'SphinxIndex\Service\RedisAdapter' => function($sm) {
+                Service\RedisAdapter::class => function($sm) {
                     $instance = new Service\RedisAdapter();
                     return $instance;
                 },
-                'SphinxIndex\Service\SphinxAdapter' => function($sm) {
+                Service\SphinxAdapter::class => function($sm) {
                     return new Service\SphinxAdapter();
                 },
-                'SphinxIndexModuleOptions' => function($sm) {
+                Options\ModuleOptions::class => function($sm) {
                     $config = $sm->get('Config');
-                    return new Options\ModuleOptions(isset($config['sphinx_index']) ? $config['sphinx_index'] : array());
+                    return new Options\ModuleOptions($config['sphinx_index'] ?? []);
                 },
-                'SphinxIndex\DataProvider\PluginManager' => 'SphinxIndex\DataProvider\Service\PluginManagerFactory',
+                DataProvider\PluginManager::class => DataProvider\PluginManagerFactory::class,
+                Index\IndexManager::class => Index\IndexManagerFactory::class,
             ),
             'abstract_factories' => array(
-                'SphinxIndex\Redis\Adapter\AbstractFactory',
+                Redis\Adapter\AbstractFactory::class,
             ),
             'invokables' => array(
                 'SphinxIndex\Redis' => '\Redis',
-                'SphinxIndex\Index\IndexManager' => 'SphinxIndex\Index\IndexManager',
             ),
             'shared' => array(
                 'SphinxIndex\Redis' => false,

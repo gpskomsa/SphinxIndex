@@ -320,6 +320,10 @@ class Xmlpipe2 implements DataDriverInterface
         return implode(' ', $result);
     }
 
+    /**
+     *
+     * @param string $data
+     */
     protected function output($data)
     {
         if (!$this->useBuffer) {
